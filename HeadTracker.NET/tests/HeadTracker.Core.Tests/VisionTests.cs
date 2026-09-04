@@ -1,0 +1,245 @@
+using HeadTracker.Core.Configuration;
+using HeadTracker.Core.Vision;
+
+namespace HeadTracker.Core.Tests;
+
+public class PoseMathTests
+{
+    [Fact]
+    public void WrapAngle_FoldsIntoMinusPiPlusPi()
+    {
+        Assert.Equal(-Math.PI / 2, PoseMath.WrapAngle(3 * Math.PI / 2), 9);
+        Assert.Equal(Math.PI / 2, PoseMath.WrapAngle(-3 * Math.PI / 2), 9);
+        Assert.Equal(0.5, PoseMath.WrapAngle(0.5), 9);
+    }
+
+    [Fact]
+    public void Signum_ZeroReturnsPositiveOne_PerLegacy()
+    {
+        Assert.Equal(1, PoseMath.Signum(0));
+        Assert.Equal(1, PoseMath.Signum(3));
+        Assert.Equal(-1, PoseMath.Signum(-3));
+    }
+
+    [Fact]
+    public void Quaternion_IdentityRotation_GivesZeroAngles()
+    {
+        var ypr = QuatD.FromRotationMatrix(Mat3.Identity).ToYprDegrees();
+        Assert.Equal(0, ypr.X, 9);
+        Assert.Equal(0, ypr.Y, 9);
+        Assert.Equal(0, ypr.Z, 9);
+    }
+
+    [Fact]
+    public void Quaternion_ZAxis90_MatchesLegacyEulerFormulas()
+    {
+        // Rz(90 deg); with the legacy quat2eulers formulas this lands in slot X.
+        var rz90 = new Mat3(0, -1, 0, 1, 0, 0, 0, 0, 1);
+        var ypr = QuatD.FromRotationMatrix(rz90).ToYprDegrees();
+        Assert.Equal(90, ypr.X, 6);
+        Assert.Equal(0, ypr.Y, 6);
+        Assert.Equal(0, ypr.Z, 6);
+    }
+
+    [Fact]
+    public void Quaternion_XAxis90_MatchesLegacyEulerFormulas()
+    {
+        var rx90 = new Mat3(1, 0, 0, 0, 0, -1, 0, 1, 0);
+        var ypr = QuatD.FromRotationMatrix(rx90).ToYprDegrees();
+        Assert.Equal(0, ypr.X, 6);
+        Assert.Equal(0, ypr.Y, 6);
+        Assert.Equal(90, ypr.Z, 6);
+    }
+
+    [Fact]
+    public void Mat3_Multiply_RFaceIsOrthogonal()
+    {
+        var product = Mat3.RFace.Multiply(Mat3.RFace.Transpose());
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                double expected = i == j ? 1 : 0;
+                Assert.Equal(expected, new[] { product.M00, product.M01, product.M02,
+                    product.M10, product.M11, product.M12,
+                    product.M20, product.M21, product.M22 }[i * 3 + j], 9);
+            }
+        }
+    }
+}
+
+public class AccelaFilterTests
+{
+    private static AccelaFilter Default() => new(rotSmoothing: 0.08, posSmoothing: 0.03,
+        rotDeadzone: 3.0, posDeadzone: 0.03);
+
+    [Fact]
+    public void FirstSample_PassesThroughUnchanged()
+    {
+        var f = Default();
+        var (eul, t) = f.Filter(new Vec3(10, -5, 2), new Vec3(0.05, 0.01, -0.2), 0.004);
+        Assert.Equal(10, eul.X, 9);
+        Assert.Equal(-5, eul.Y, 9);
+        Assert.Equal(2, eul.Z, 9);
+        Assert.Equal(0.05, t.X, 9);
+        Assert.Equal(0.01, t.Y, 9);
+        Assert.Equal(-0.2, t.Z, 9);
+    }
+
+    [Fact]
+    public void MovementInsideDeadzone_DoesNotMoveOutput()
+    {
+        var f = Default();
+        f.Filter(new Vec3(10, 0, 0), new Vec3(0.05, 0, 0), 0.004);
+        var (eul, t) = f.Filter(new Vec3(11.5, 0, 0), new Vec3(0.06, 0, 0), 0.004);
+        Assert.Equal(10, eul.X, 9);
+        Assert.Equal(0.05, t.X, 9);
+    }
+
+    [Fact]
+    public void RotationWrap_179ToMinus179_IsTreatedAsSmallPositiveStep()
+    {
+        var f = Default();
+        f.Filter(new Vec3(179, 0, 0), Vec3.Zero, 0.004);
+        // delta wraps to +2 deg, which is inside the 3 deg rotation deadzone
+        var (eul, _) = f.Filter(new Vec3(-179, 0, 0), Vec3.Zero, 0.004);
+        Assert.Equal(179, eul.X, 9);
+    }
+
+    [Fact]
+    public void LargeStep_ConvergesTowardInput()
+    {
+        var f = Default();
+        f.Filter(Vec3.Zero, Vec3.Zero, 0.004);
+        var target = new Vec3(20, 0, 0);
+        var (eul, _) = (Vec3.Zero, Vec3.Zero);
+        for (int i = 0; i < 2000; i++)
+        {
+            (eul, _) = f.Filter(target, Vec3.Zero, 0.004);
+        }
+        Assert.True(Math.Abs(eul.X - 20) < 3.01, $"expected convergence near 20, got {eul.X}");
+    }
+
+    [Fact]
+    public void Center_RestoresFirstRunPassthrough()
+    {
+        var f = Default();
+        f.Filter(new Vec3(5, 0, 0), Vec3.Zero, 0.004);
+        f.Center();
+        var (eul, _) = f.Filter(new Vec3(30, 0, 0), Vec3.Zero, 0.004);
+        Assert.Equal(30, eul.X, 9);
+    }
+}
+
+public class PoseRemapperTests
+{
+    [Fact]
+    public void FirstPose_CentersToZero()
+    {
+        var remapper = new PoseRemapper(new TrackerSettings());
+        Assert.False(remapper.UseAccelaPath);
+        remapper.OnPose(Mat3.Identity, new Vec3(0.1, 0.2, 0.3));
+        var pose = remapper.SnapshotUnfiltered()!.Value;
+        Assert.Equal(0, pose.Yaw, 9);
+        Assert.Equal(0, pose.Pitch, 9);
+        Assert.Equal(0, pose.Roll, 9);
+        Assert.Equal(0, pose.Tx, 9);
+        Assert.Equal(0, pose.Ty, 9);
+        Assert.Equal(0, pose.Tz, 9);
+    }
+
+    [Fact]
+    public void Translation_IsRelativeToCenter_UdpPathUnmapped()
+    {
+        var remapper = new PoseRemapper(new TrackerSettings());
+        remapper.OnPose(Mat3.Identity, new Vec3(0.1, 0.2, 0.3));
+        remapper.OnPose(Mat3.Identity, new Vec3(0.2, 0.2, 0.3));
+        var pose = remapper.SnapshotUnfiltered()!.Value;
+        Assert.Equal(0.1, pose.Tx, 6);
+        Assert.Equal(0, pose.Ty, 6);
+        Assert.Equal(0, pose.Tz, 6);
+    }
+
+    [Fact]
+    public void FreetrackPath_ScalesTranslationToOutputBound()
+    {
+        var settings = new TrackerSettings { UseFt = true };
+        var remapper = new PoseRemapper(settings);
+        Assert.True(remapper.UseAccelaPath);
+
+        remapper.OnPose(Mat3.Identity, Vec3.Zero);
+        remapper.OnPose(Mat3.Identity, new Vec3(settings.InpBoundX, 0, 0));
+        var pose = remapper.Tick(0.004)!.Value;
+        Assert.Equal(settings.OutBoundX, pose.Tx, 6);
+
+        // beyond the input bound the expo clamps at +/-1
+        remapper.OnPose(Mat3.Identity, new Vec3(2 * settings.InpBoundX, 0, 0));
+        pose = remapper.Tick(0.004)!.Value;
+        Assert.Equal(settings.OutBoundX, pose.Tx, 6);
+    }
+
+    [Fact]
+    public void FreetrackPath_AppliesCubicExpo()
+    {
+        var settings = new TrackerSettings { UseFt = true, ExpoTransX = 1.0 };
+        var remapper = new PoseRemapper(settings);
+        remapper.OnPose(Mat3.Identity, Vec3.Zero);
+        remapper.OnPose(Mat3.Identity, new Vec3(0.5 * settings.InpBoundX, 0, 0));
+        var pose = remapper.Tick(0.004)!.Value;
+        Assert.Equal(0.125 * settings.OutBoundX, pose.Tx, 6);
+    }
+
+    [Fact]
+    public void FreetrackPath_ScalesYawToOutputBound()
+    {
+        var settings = new TrackerSettings { UseFt = true };
+        var remapper = new PoseRemapper(settings);
+        var rz90 = new Mat3(0, -1, 0, 1, 0, 0, 0, 0, 1);
+        remapper.OnPose(Mat3.Identity, Vec3.Zero);
+        remapper.OnPose(rz90, Vec3.Zero);
+        var pose = remapper.Tick(0.004)!.Value;
+        // 90 deg raw yaw exceeds inp_bound_yaw, so it clamps to the full output bound
+        Assert.Equal(settings.OutBoundYaw, pose.Yaw, 6);
+    }
+
+    [Fact]
+    public void ResetCenter_NextPoseBecomesNewCenter()
+    {
+        var remapper = new PoseRemapper(new TrackerSettings());
+        remapper.OnPose(Mat3.Identity, Vec3.Zero);
+        remapper.OnPose(Mat3.Identity, new Vec3(0.2, 0, 0));
+        remapper.ResetCenter();
+        remapper.OnPose(Mat3.Identity, new Vec3(0.2, 0, 0));
+        var pose = remapper.SnapshotUnfiltered()!.Value;
+        Assert.Equal(0, pose.Tx, 9);
+    }
+
+    [Fact]
+    public void Tick_BeforeAnyPose_ReturnsNull()
+    {
+        var remapper = new PoseRemapper(new TrackerSettings());
+        Assert.Null(remapper.Tick(0.004));
+        Assert.Null(remapper.SnapshotUnfiltered());
+    }
+}
+
+public class CameraIntrinsicsTests
+{
+    [Fact]
+    public void BaseResolution_MatchesLegacyPs3EyeCalibration()
+    {
+        var k = CameraIntrinsics.ForResolution(640, 480);
+        Assert.Equal(553.61456617, k.Fx, 5);
+        Assert.Equal(556.75788726, k.Fy, 5);
+        Assert.Equal(308.32781287, k.Cx, 5);
+        Assert.Equal(252.73270154, k.Cy, 5);
+    }
+
+    [Fact]
+    public void LargerResolution_ScalesProportionally()
+    {
+        var k = CameraIntrinsics.ForResolution(1280, 960);
+        Assert.Equal(553.61456617 * 2, k.Fx, 5);
+        Assert.Equal(252.73270154 * 2, k.Cy, 5);
+    }
+}

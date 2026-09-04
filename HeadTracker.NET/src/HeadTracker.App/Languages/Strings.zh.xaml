@@ -1,0 +1,166 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xml:space="preserve">
+    <!-- ============ common ============ -->
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="yes">是</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="no">否</system:String>
+
+    <!-- ============ main window ============ -->
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tray_show">显示主窗口</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tray_toggle">启动 / 停止  (F9)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tray_recenter">回中  (C)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tray_settings">设置...</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tray_exit">退出</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="preview_hint">未运行 —— 点击「启动」或按 F9</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="group_perf">性能</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="group_output">输出姿态（发送给游戏）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="group_raw">原始姿态（绝对）</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_start">启动</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_stop">停止</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_recenter">回中</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_settings">设置...</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_restart_camera">重启摄像头</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_restart_camera_tip">关闭并重新打开摄像头。当画面变绿/花屏/冻结时使用——虚拟摄像头（Iriun、手机当相机）往往要重开后才能恢复正常。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="mirror_on">镜像：开</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="mirror_off">镜像：关</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="mirror_tooltip">水平翻转摄像头画面（抵消手机前置摄像头的自拍镜像）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="hotkeys_hint">快捷键：F9 启动/停止 · C 回中 · 全局回中热键（默认 Ctrl+X，可在设置修改）游戏内有效。关闭窗口后在托盘继续跟踪。</system:String>
+
+    <!-- ============ status texts ============ -->
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_idle">空闲</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_starting">正在启动摄像头并加载模型…</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_stopping">正在停止…</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_restarting_camera">正在重启摄像头…</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_stopped">已停止</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_start_failed">启动失败：{0}</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_tracking">跟踪中 → {0}</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_tracking_noout">跟踪中（配置未启用任何输出）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_recentered">已回中（中立位姿）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_recentered_joystick">已回中（摇杆）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_paused_joystick">已暂停（摇杆）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_resumed_joystick">已恢复（摇杆）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="paused_tag"> | 已暂停</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="perf_format">帧率 {0} | 跟踪 {1} | 重投影 {2}px | 错误 {3}</system:String>
+
+    <!-- ============ settings window ============ -->
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="settings_title">HeadTracker 设置</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tab_camera">摄像头</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tab_output">输出</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tab_fusion">融合与热键</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tab_mapping">映射</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="tab_smoothing">平滑</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_language">界面语言</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="lang_auto">自动 / 跟随系统</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_camera_id">摄像头设备</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_camera_id_tip">从检测到的摄像头中选择；前面的数字是打开它所用的设备索引。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_camera_refresh">刷新</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_camera_unavailable">摄像头 {0}（未连接）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_camera_fallback">摄像头 {0}</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_mirror">镜像画面（前置摄像头）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_fps">目标帧率</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_auto_expo">自动曝光</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_gain">增益 (0..1)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_expo">曝光 (0..1)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_redetect">每 N 帧重新检测</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_landmark_model">关键点模型</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="lm_0">0 — 最快 (112px)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="lm_1">1 — 快 (112px)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="lm_2">2 — 均衡 (224px)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="lm_3">3 — 精确 (224px)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="lm_4">4 — 最精确 (224px)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_roi_smooth">ROI 平滑率</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_use_ft">FreeTrack 共享内存</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_npclient">npclient (TrackIR)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_send_udp">发送 UDP 姿态数据</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_udp_host">UDP 主机</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_udp_port">UDP 端口</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="dcs_note">DCS World：启用 FreeTrack 共享内存后，在 DCS 中把头部跟踪设为 TrackIR 即可，无需运行 opentrack 等其他软件。</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_use_ekf">EKF 融合 (use_ekf)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_use_fsa">FSA-Net 第二测量源</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_ekf_dt">EKF 预测步长 (秒)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_pitch_offset">FSA↔PnP 俯仰偏移 (度)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey">回中热键（键盘）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey_tip">格式：Ctrl+X、Ctrl+Alt+X，或单独的 F 键如 F13。注册为全局热键，游戏获得焦点时也生效；若与其它程序冲突可在此修改。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_name0">摇杆名称（回中）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_btn0">按钮编号（回中）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_name1">摇杆名称（暂停）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_btn1">按钮编号（暂停）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="fusion_note">键盘：上方的回中热键注册为全局热键，游戏内也有效。摇杆按钮经 DirectInput 后台轮询，游戏获得焦点时依然有效。FSA-Net 融合需要先启用 EKF。</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_col_x">X / 偏航</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_col_y">Y / 俯仰</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_col_z">Z / 滚转</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_inp_bound_m">输入界（米）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_out_bound_m">输出界（米）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_expo_m">指数曲线 (0..1)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_inp_bound_deg">输入界（度）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_out_bound_deg">输出界（度）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_expo_deg">指数曲线 (0..1)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_note">旋转三行依次为 偏航/俯仰/滚转。头部运动超过输入界后，输出在输出界处饱和。</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_use">使用 Accela 滤波</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_double">双重滤波</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_rot_smooth">旋转平滑</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_rot_dz">旋转死区（度）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_pos_smooth">平移平滑</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_pos_dz">平移死区（米）</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_save">保存并应用</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_saving">应用中…</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_cancel">取消</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_ok">确定</system:String>
+
+    <!-- ============ calibration wizard ============ -->
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_calibration">相机标定...</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_calibration_note">用打印的 ChArUco 标定板测量摄像头真实内参与镜头畸变，结果写入 config.yaml 供姿态解算使用。</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_title">相机标定</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_need_board">打印标定板并置于摄像头前，此处显示实时角点检测。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_intro">从多个角度采集打印的 ChArUco 标定板（5+ 个样本，带倾斜和偏移），然后标定并保存。保持标定板平整且完整可见。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_print_board">1. 保存可打印标定板 (PNG)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_capture">2. 采集样本</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_samples_none">暂无样本</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_do_calibrate">3. 标定</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_save">保存并应用</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_clear">清除已保存标定</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_close">关闭</system:String>
+
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_camera_failed">无法打开摄像头。请关闭占用它的其他程序后重新打开向导。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_corners_ok">检测到 ChArUco 角点：{0} —— 将标定板移到新角度后采集。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_corners_none">检测到角点：{0} —— 请将打印的标定板完整置于画面内。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_board_saved">标定板已保存。请以 100% 比例打印（关闭适应页面）。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_sample_item">样本 #{0}：{1} 个角点</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_samples">已采集样本：{0}</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_capture_failed">采集失败 —— 角点不足。请将标定板保持稳定并完整可见。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_result_ok">标定成功 —— RMS {0:F3}，fx {1:F0}，fy {2:F0}。保存以应用。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_result_fail">标定失败：{0}</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_saved">标定已保存到 config.yaml。重启跟踪以应用。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="calib_cleared">已清除保存的标定 —— 恢复默认内参。</system:String>
+
+    <!-- ============ response curve editor ============ -->
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_edit_btn">编辑响应曲线...</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_edit_note">曲线按轴覆盖 Expo；不启用则继续使用 Expo。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_title">响应曲线编辑器</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_hint">拖动蓝色控制点调整曲线形状。双击空白处添加控制点；右键点击控制点（或选中后按 Delete）删除。灰色端点固定在满偏位置。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_axes">轴</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_enable">启用曲线（覆盖 Expo）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_reset_expo">从 Expo 重置</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_linear">设为线性</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_delete_point">删除选中点</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_input_axis">输入（归一化）→</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_output_axis">输出（到游戏）→</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_axis_trans_x">平移 X</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_axis_trans_y">平移 Y</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_axis_trans_z">平移 Z</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_axis_yaw">旋转 偏航 (Yaw)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_axis_pitch">旋转 俯仰 (Pitch)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_axis_roll">旋转 滚转 (Roll)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_status_enabled">曲线已启用 —— {0} 个控制点。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_status_disabled">曲线未启用 —— 使用 Expo（{0}）。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="curve_selected">选中点：({0:F2}, {1:F2})</system:String>
+</ResourceDictionary>

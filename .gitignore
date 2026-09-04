@@ -1,0 +1,117 @@
+# This file is used to ignore files which are generated
+# ----------------------------------------------------------------------------
+
+*~
+*.autosave
+*.a
+*.core
+*.moc
+*.o
+*.obj
+*.orig
+*.rej
+*.so
+*.so.*
+*_pch.h.cpp
+*_resource.rc
+*.qm
+.#*
+*.*#
+core
+!core/
+tags
+.DS_Store
+.directory
+*.debug
+Makefile*
+*.prl
+*.app
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+Thumbs.db
+*.res
+*.rc
+/.qmake.cache
+/.qmake.stash
+
+# qtcreator generated files
+*.pro.user*
+
+# xemacs temporary files
+*.flc
+
+# Vim temporary files
+.*.swp
+
+# Visual Studio generated files
+*.ib_pdb_index
+*.idb
+*.ilk
+*.pdb
+*.sln
+*.suo
+*.vcproj
+*vcproj.*.*.user
+*.ncb
+*.sdf
+*.opensdf
+*.vcxproj
+*vcxproj.*
+
+# MinGW generated files
+*.Debug
+*.Release
+
+# Python byte code
+*.pyc
+
+# Binaries
+# --------
+*.dll
+*.exe
+
+build-uglobalhotkey-Desktop_Qt_5_14_1_MSVC2017_32bit-Release/
+Release/assets/
+build-uglobalhotkey-Desktop_Qt_5_14_1_MSVC2017_32bit-Debug/debug/moc_predefs.h
+Release/
+Release.7z
+build-uglobalhotkey-Desktop_Qt_5_14_1_MSVC2017_32bit-Debug/
+
+# CMake / vcpkg
+build/
+CMakeUserPresets.json
+vcpkg_installed/
+
+*.zip
+Release
+Release.x86
+Release.bk
+Release.x86.bk/
+.ipynb_checkpoints/convert_models-checkpoint.ipynb
+.ipynb_checkpoints/onnx_quat-checkpoint.ipynb
+docs/FAgX30FPS.PNG
+docs/FAgX60FPS.PNG
+docs/FAgX75FPS.PNG
+.qt_for_python/
+
+# ---------------------------------------------------------------------------
+# .NET (HeadTracker.NET) - the active C#/WPF rewrite
+# ---------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+TestResults/
+publish/
+artifacts/
+
+# The "*.sln" rule above targets legacy VS C++ solutions; keep the .NET solution.
+!HeadTracker.NET/**/*.sln
+
+# Legacy "*.core" (line 7) and "*.app" (line 28) accidentally match the C# source
+# directory names HeadTracker.Core / HeadTracker.App, which would hide ALL app code
+# (git skips ignored directories without descending). Re-include the directories so
+# git walks into them; bin/obj inside stay ignored by the [Bb]in/ [Oo]bj/ rules above.
+!HeadTracker.NET/src/HeadTracker.Core/
+!HeadTracker.NET/src/HeadTracker.App/

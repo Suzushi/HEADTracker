@@ -1,0 +1,326 @@
+<Window x:Class="HeadTracker.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource settings_title}" Height="560" Width="520"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Window.Resources>
+        <Style TargetType="TextBlock" x:Key="Label">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,3" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,3" />
+            <Setter Property="Height" Value="24" />
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,5" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,3" />
+            <Setter Property="Height" Value="26" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TabControl Grid.Row="0">
+            <!-- ============ Camera / pipeline ============ -->
+            <TabItem Header="{DynamicResource tab_camera}">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_language}" />
+                    <ComboBox Grid.Row="0" Grid.Column="1" SelectedValuePath="Tag"
+                              SelectedValue="{Binding UiLanguage, UpdateSourceTrigger=PropertyChanged}"
+                              SelectionChanged="OnLanguageChanged">
+                        <ComboBoxItem Tag="auto" Content="{DynamicResource lang_auto}" />
+                        <ComboBoxItem Tag="en" Content="English" />
+                        <ComboBoxItem Tag="zh" Content="中文" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_camera_id}" />
+                    <Grid Grid.Row="1" Grid.Column="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="CameraCombo" Grid.Column="0"
+                                  DisplayMemberPath="Display" SelectedValuePath="Index"
+                                  SelectedValue="{Binding CameraId, UpdateSourceTrigger=PropertyChanged}"
+                                  ToolTip="{DynamicResource set_camera_id_tip}" />
+                        <Button x:Name="RefreshCamerasButton" Grid.Column="1" MinWidth="64" Height="26"
+                                Margin="4,0,0,0" VerticalAlignment="Center"
+                                Content="{DynamicResource set_camera_refresh}" Click="OnRefreshCameras" />
+                    </Grid>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_mirror}" />
+                    <CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding MirrorCamera}" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_fps}" />
+                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Fps, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_auto_expo}" />
+                    <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding EnableAutoExpo}" />
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_gain}" />
+                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding CameraGain, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_expo}" />
+                    <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding CameraExpo, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="7" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_redetect}" />
+                    <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding DetectDuration, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="8" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_landmark_model}" />
+                    <ComboBox Grid.Row="8" Grid.Column="1" SelectedIndex="{Binding LandmarkDetectMethod}">
+                        <ComboBoxItem Content="{DynamicResource lm_0}" />
+                        <ComboBoxItem Content="{DynamicResource lm_1}" />
+                        <ComboBoxItem Content="{DynamicResource lm_2}" />
+                        <ComboBoxItem Content="{DynamicResource lm_3}" />
+                        <ComboBoxItem Content="{DynamicResource lm_4}" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="9" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_roi_smooth}" />
+                    <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding RoiFilterRate, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <StackPanel Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top" Margin="0,10,0,0">
+                        <Button x:Name="CalibrationButton" Content="{DynamicResource set_calibration}" Height="30"
+                                HorizontalAlignment="Left" Width="240" Click="OnCalibrationClick" />
+                        <TextBlock Text="{DynamicResource set_calibration_note}" TextWrapping="Wrap" Foreground="Gray" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ============ Output protocols ============ -->
+            <TabItem Header="{DynamicResource tab_output}">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_use_ft}" />
+                    <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding UseFt}" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_npclient}" />
+                    <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding UseNpclient}" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_send_udp}" />
+                    <CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding SendPosedataUdp}" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_udp_host}" />
+                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding UdpHost, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_udp_port}" />
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap" Foreground="Gray"
+                               VerticalAlignment="Top" Margin="0,10,0,0"
+                               Text="{DynamicResource dcs_note}" />
+                </Grid>
+            </TabItem>
+
+            <!-- ============ Fusion & hotkeys ============ -->
+            <TabItem Header="{DynamicResource tab_fusion}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_use_ekf}" />
+                        <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding UseEkf}" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_use_fsa}" />
+                        <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding UseFsa}" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Label}" Text="cov_Q_lm" />
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding CovQLm, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Label}" Text="cov_Q_fsa" />
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CovQFsa, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Label}" Text="cov_T" />
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding CovT, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Label}" Text="cov_V" />
+                        <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding CovV, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource Label}" Text="cov_W" />
+                        <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding CovW, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_ekf_dt}" />
+                        <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding EkfPredictDt, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="8" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_pitch_offset}" />
+                        <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding PitchOffsetFsaPnpDegrees, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <Separator Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,6" />
+
+                        <TextBlock Grid.Row="10" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_joy_name0}" />
+                        <TextBox Grid.Row="10" Grid.Column="1" Text="{Binding HotkeyJoystickName0, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="11" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_joy_btn0}" />
+                        <TextBox Grid.Row="11" Grid.Column="1" Text="{Binding HotkeyJoystickButton0, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="12" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_joy_name1}" />
+                        <TextBox Grid.Row="12" Grid.Column="1" Text="{Binding HotkeyJoystickName1, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="13" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_joy_btn1}" />
+                        <TextBox Grid.Row="13" Grid.Column="1" Text="{Binding HotkeyJoystickButton1, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="14" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource set_recenter_hotkey}" />
+                        <TextBox Grid.Row="14" Grid.Column="1" Text="{Binding RecenterHotkey, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="{DynamicResource set_recenter_hotkey_tip}" />
+
+                        <TextBlock Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap" Foreground="Gray"
+                                   Margin="0,10,0,0"
+                                   Text="{DynamicResource fusion_note}" />
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ Mapping ============ -->
+            <TabItem Header="{DynamicResource tab_mapping}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{DynamicResource map_col_x}" FontWeight="Bold" HorizontalAlignment="Center" />
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="{DynamicResource map_col_y}" FontWeight="Bold" HorizontalAlignment="Center" />
+                        <TextBlock Grid.Row="0" Grid.Column="3" Text="{DynamicResource map_col_z}" FontWeight="Bold" HorizontalAlignment="Center" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_inp_bound_m}" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Margin="2,3" Text="{Binding InpBoundX, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="1" Grid.Column="2" Margin="2,3" Text="{Binding InpBoundY, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="1" Grid.Column="3" Margin="2,3" Text="{Binding InpBoundZ, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_out_bound_m}" />
+                        <TextBox Grid.Row="2" Grid.Column="1" Margin="2,3" Text="{Binding OutBoundX, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="2" Grid.Column="2" Margin="2,3" Text="{Binding OutBoundY, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="2" Grid.Column="3" Margin="2,3" Text="{Binding OutBoundZ, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_expo_m}" />
+                        <TextBox Grid.Row="3" Grid.Column="1" Margin="2,3" Text="{Binding ExpoTransX, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="3" Grid.Column="2" Margin="2,3" Text="{Binding ExpoTransY, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="3" Grid.Column="3" Margin="2,3" Text="{Binding ExpoTransZ, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <Separator Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,6" />
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_inp_bound_deg}" />
+                        <TextBox Grid.Row="5" Grid.Column="1" Margin="2,3" Text="{Binding InpBoundYaw, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="5" Grid.Column="2" Margin="2,3" Text="{Binding InpBoundPitch, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="5" Grid.Column="3" Margin="2,3" Text="{Binding InpBoundRoll, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_out_bound_deg}" />
+                        <TextBox Grid.Row="6" Grid.Column="1" Margin="2,3" Text="{Binding OutBoundYaw, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="6" Grid.Column="2" Margin="2,3" Text="{Binding OutBoundPitch, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="6" Grid.Column="3" Margin="2,3" Text="{Binding OutBoundRoll, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_expo_deg}" />
+                        <TextBox Grid.Row="7" Grid.Column="1" Margin="2,3" Text="{Binding ExpoEulYaw, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="7" Grid.Column="2" Margin="2,3" Text="{Binding ExpoEulPitch, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="7" Grid.Column="3" Margin="2,3" Text="{Binding ExpoEulRoll, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button x:Name="CurveEditorButton" Content="{DynamicResource curve_edit_btn}"
+                                    Height="28" MinWidth="170" Click="OnEditCurves" />
+                            <TextBlock Text="{DynamicResource curve_edit_note}" Foreground="Gray" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Margin="10,0,0,0" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="4" TextWrapping="Wrap" Foreground="Gray"
+                                   Text="{DynamicResource map_note}" />
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ Accela filter ============ -->
+            <TabItem Header="{DynamicResource tab_smoothing}">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource sm_use}" />
+                    <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding UseAccela}" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource sm_double}" />
+                    <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding DoubleAccela}" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource sm_rot_smooth}" />
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AccelaRotSmoothing, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource sm_rot_dz}" />
+                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding AccelaRotDeadzone, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource sm_pos_smooth}" />
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding AccelaPosSmoothing, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource sm_pos_dz}" />
+                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding AccelaPosDeadzone, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button x:Name="SaveButton" Content="{DynamicResource btn_save}" Width="120" Height="30" Margin="0,0,8,0" Click="OnSaveClick" IsDefault="True" />
+            <Button Content="{DynamicResource btn_cancel}" Width="90" Height="30" Click="OnCancelClick" IsCancel="True" />
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,56 @@
+<Window x:Class="HeadTracker.App.CalibrationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource calib_title}" Height="560" Width="780"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize">
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="260" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ===== live preview ===== -->
+        <Grid Grid.Column="0" Margin="0,0,8,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0" Background="Black" BorderBrush="#444" BorderThickness="1">
+                <Image x:Name="PreviewImage" Stretch="Uniform" />
+            </Border>
+            <TextBlock Grid.Row="1" x:Name="LiveStatus" Margin="0,6,0,0" Foreground="Gray"
+                       TextWrapping="Wrap" Text="{DynamicResource calib_need_board}" />
+        </Grid>
+
+        <!-- ===== control panel ===== -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource calib_intro}" TextWrapping="Wrap" Foreground="Gray" Margin="0,0,0,10" />
+
+                <Button x:Name="PrintBoardButton" Content="{DynamicResource calib_print_board}"
+                        Height="30" Margin="0,0,0,6" Click="OnPrintBoard" />
+
+                <Separator Margin="0,4" />
+
+                <Button x:Name="CaptureButton" Content="{DynamicResource calib_capture}"
+                        Height="30" Margin="0,0,0,6" Click="OnCapture" />
+                <TextBlock x:Name="SamplesText" Text="{DynamicResource calib_samples_none}" Margin="0,0,0,4" />
+                <ListBox x:Name="SamplesList" Height="104" Margin="0,0,0,6" />
+
+                <Separator Margin="0,4" />
+
+                <Button x:Name="CalibrateButton" Content="{DynamicResource calib_do_calibrate}"
+                        Height="30" Margin="0,0,0,6" Click="OnCalibrate" />
+                <TextBlock x:Name="ResultText" TextWrapping="Wrap" Foreground="Gray" Margin="0,0,0,6" />
+
+                <Button x:Name="SaveButton" Content="{DynamicResource calib_save}"
+                        Height="30" Margin="0,0,0,6" Click="OnSave" IsEnabled="False" />
+                <Button x:Name="ClearButton" Content="{DynamicResource calib_clear}"
+                        Height="30" Margin="0,0,0,6" Click="OnClear" />
+
+                <Button x:Name="CloseButton" Content="{DynamicResource calib_close}"
+                        Height="30" Margin="0,12,0,0" Click="OnClose" IsCancel="True" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

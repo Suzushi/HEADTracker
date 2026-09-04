@@ -1,0 +1,87 @@
+<Window x:Class="HeadTracker.App.CurveEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource curve_title}" Height="540" Width="760"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{DynamicResource curve_hint}" TextWrapping="Wrap"
+                   Foreground="Gray" Margin="0,0,0,10" />
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="185" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ===== axis selector ===== -->
+            <DockPanel Grid.Column="0" Margin="0,0,10,0">
+                <TextBlock DockPanel.Dock="Top" Text="{DynamicResource curve_axes}"
+                           FontWeight="Bold" Margin="0,0,0,4" />
+                <ListBox x:Name="AxisList" DisplayMemberPath="Name" SelectionChanged="OnAxisChanged" />
+            </DockPanel>
+
+            <!-- ===== plot ===== -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" x:Name="AxisTitle" FontWeight="Bold"
+                           HorizontalAlignment="Center" Margin="0,0,0,4" />
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{DynamicResource curve_output_axis}"
+                               VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,4,0">
+                        <TextBlock.LayoutTransform>
+                            <RotateTransform Angle="-90" />
+                        </TextBlock.LayoutTransform>
+                    </TextBlock>
+                    <Border Grid.Column="1" BorderBrush="#888" BorderThickness="1" Background="White">
+                        <Canvas x:Name="PlotCanvas" ClipToBounds="True" Background="Transparent"
+                                MouseLeftButtonDown="OnCanvasMouseDown"
+                                MouseMove="OnCanvasMouseMove"
+                                MouseLeftButtonUp="OnCanvasMouseUp" />
+                    </Border>
+                </Grid>
+
+                <TextBlock Grid.Row="2" Text="{DynamicResource curve_input_axis}"
+                           HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="Gray" />
+            </Grid>
+
+            <!-- ===== tools ===== -->
+            <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                <CheckBox x:Name="EnableCheck" Margin="0,0,0,10"
+                          Checked="OnEnableChanged" Unchecked="OnEnableChanged">
+                    <TextBlock Text="{DynamicResource curve_enable}" TextWrapping="Wrap" />
+                </CheckBox>
+
+                <Button Content="{DynamicResource curve_reset_expo}" Height="28" Margin="0,0,0,6" Click="OnResetFromExpo" />
+                <Button Content="{DynamicResource curve_linear}" Height="28" Margin="0,0,0,6" Click="OnLinear" />
+                <Button Content="{DynamicResource curve_delete_point}" Height="28" Margin="0,0,0,6" Click="OnDeletePoint" />
+
+                <Separator Margin="0,6" />
+
+                <TextBlock x:Name="StatusReadout" TextWrapping="Wrap" Margin="0,0,0,6" />
+                <TextBlock x:Name="PointReadout" TextWrapping="Wrap" Foreground="Gray" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="{DynamicResource btn_ok}" Width="100" Height="30" Margin="0,0,8,0" Click="OnOk" IsDefault="True" />
+            <Button Content="{DynamicResource btn_cancel}" Width="90" Height="30" Click="OnCancel" IsCancel="True" />
+        </StackPanel>
+    </Grid>
+</Window>

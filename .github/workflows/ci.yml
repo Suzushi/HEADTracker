@@ -1,0 +1,60 @@
+name: CI
+
+# The WPF app targets net8.0-windows, so every job must run on a Windows runner
+# (WPF/Win32 cannot be compiled on ubuntu-latest).
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  SOLUTION: HeadTracker.NET/HeadTracker.sln
+
+jobs:
+  build-test-publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Build (Release)
+        run: dotnet build ${{ env.SOLUTION }} -c Release --no-restore
+
+      - name: Test
+        run: dotnet test ${{ env.SOLUTION }} -c Release --no-build --logger trx --results-directory ${{ github.workspace }}/TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ github.workspace }}/TestResults
+          if-no-files-found: ignore
+
+      # Self-contained single-folder release; the model assets are copied
+      # automatically by the app project's Content glob.
+      - name: Publish (win-x64, self-contained)
+        run: dotnet publish HeadTracker.NET/src/HeadTracker.App/HeadTracker.App.csproj -c Release -r win-x64 --self-contained true -o ${{ github.workspace }}/publish
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HeadTracker-win-x64
+          path: ${{ github.workspace }}/publish
