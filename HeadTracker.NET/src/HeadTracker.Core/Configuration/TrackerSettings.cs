@@ -309,6 +309,25 @@ public sealed class TrackerSettings
     [YamlMember(Alias = "accela_pos_deadzone")]
     public double AccelaPosDeadzone { get; set; } = 0.03;
 
+    // --- One-Euro filter (adaptive low-pass on the Euler output) ----------------
+    // Off by default so legacy configs are unaffected; config.yaml opts in. Applied
+    // per-axis to yaw/pitch/roll at the processing rate, before Accela, to kill the
+    // at-rest "buzz" without adding lag to real head movement.
+    [YamlMember(Alias = "use_one_euro")]
+    public bool UseOneEuro { get; set; } = false;
+
+    /// <summary>Cutoff in Hz at rest; lower smooths more but adds lag when still.</summary>
+    [YamlMember(Alias = "one_euro_min_cutoff")]
+    public double OneEuroMinCutoff { get; set; } = 1.2;
+
+    /// <summary>Speed coefficient; higher reduces lag when moving but passes more jitter.</summary>
+    [YamlMember(Alias = "one_euro_beta")]
+    public double OneEuroBeta { get; set; } = 0.25;
+
+    /// <summary>Cutoff in Hz for the derivative low-pass.</summary>
+    [YamlMember(Alias = "one_euro_deriv_cutoff")]
+    public double OneEuroDerivCutoff { get; set; } = 1.0;
+
     // --- derived (not persisted) ---------------------------------------------
     /// <summary>UI convenience: pitch_offset_fsa_pnp in degrees (stored in radians).</summary>
     [YamlIgnore]

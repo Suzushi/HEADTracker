@@ -1,4 +1,4 @@
-detect_duration: 10
+detect_duration: 20
 camera_id: 0
 enable_multithread_detect: true
 retrack_queue_size: 10
@@ -22,7 +22,7 @@ hotkey_joystick_name0: WINWING THROTTLE BASE2 + F18 HANDLE
 hotkey_joystick_button0: 104
 hotkey_joystick_name1: ""
 hotkey_joystick_button1: 0
-landmark_detect_method: 4
+landmark_detect_method: 1
 pitch_offset_fsa_pnp: 0.16406095
 cervical_face_model_x: 0.16
 cervical_face_model_y: 0.16
@@ -56,3 +56,7 @@ accela_rot_deadzone: 2.9701
 accela_pos_smoothing: 0.029000000000000005
 accela_pos_deadzone: 0.029999999999999999
 double_accela: false
+use_one_euro: true
+one_euro_min_cutoff: 1.2
+one_euro_beta: 0.25
+one_euro_deriv_cutoff: 1.0

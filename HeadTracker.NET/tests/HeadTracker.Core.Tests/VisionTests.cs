@@ -243,3 +243,93 @@ public class CameraIntrinsicsTests
         Assert.Equal(252.73270154 * 2, k.Cy, 5);
     }
 }
+
+public class OneEuroFilterTests
+{
+    [Fact]
+    public void FirstSample_PassesThroughUnchanged()
+    {
+        var f = new OneEuroFilter(minCutoff: 1.2, beta: 0.25);
+        Assert.Equal(7.5, f.Filter(7.5, 1.0 / 30.0), 9);
+    }
+
+    [Fact]
+    public void Reset_RestoresFirstRunPassthrough()
+    {
+        var f = new OneEuroFilter(1.2, 0.25);
+        f.Filter(0, 1.0 / 30.0);
+        f.Filter(10, 1.0 / 30.0);
+        f.Reset();
+        Assert.Equal(-4, f.Filter(-4, 1.0 / 30.0), 9);
+    }
+
+    [Fact]
+    public void ConstantInput_ConvergesToThatConstant()
+    {
+        var f = new OneEuroFilter(1.2, 0.25);
+        double y = 0;
+        for (int i = 0; i < 600; i++)
+        {
+            y = f.Filter(20, 1.0 / 60.0);
+        }
+        Assert.Equal(20, y, 3);
+    }
+
+    [Fact]
+    public void AlternatingNoise_OutputVarianceIsReduced()
+    {
+        // A still gaze with +/-1 deg frame-to-frame noise: the low cutoff must pull the
+        // output far tighter than the raw input. This is the at-rest "buzz" the filter kills.
+        var f = new OneEuroFilter(minCutoff: 1.2, beta: 0.0);
+        var raw = new double[400];
+        var filtered = new double[400];
+        for (int i = 0; i < 400; i++)
+        {
+            raw[i] = i % 2 == 0 ? 1.0 : -1.0;
+            filtered[i] = f.Filter(raw[i], 1.0 / 30.0);
+        }
+        double rawSd = StdDev(raw[100..]);
+        double filteredSd = StdDev(filtered[100..]);
+        Assert.True(filteredSd < rawSd * 0.5,
+            $"expected filtered jitter well below raw; raw={rawSd}, filtered={filteredSd}");
+    }
+
+    [Fact]
+    public void HighBeta_TracksRampWithLessLagThanLowBeta()
+    {
+        // The adaptive property: on a moving signal a larger beta raises the cutoff with
+        // speed, so the filter follows the ramp with markedly less lag than a fixed (beta=0)
+        // low-pass -- low latency during turns without giving up at-rest smoothing.
+        double lagHigh = RampLag(beta: 2.0);
+        double lagLow = RampLag(beta: 0.0);
+        Assert.True(lagHigh < lagLow, $"high beta should lag less on a ramp: high={lagHigh}, low={lagLow}");
+    }
+
+    private static double RampLag(double beta)
+    {
+        var f = new OneEuroFilter(1.2, beta);
+        double x = 0, y = 0;
+        for (int i = 0; i < 300; i++)
+        {
+            x += 2.0;
+            y = f.Filter(x, 1.0 / 60.0);
+        }
+        return Math.Abs(x - y);
+    }
+
+    private static double StdDev(double[] v)
+    {
+        double mean = 0;
+        foreach (var x in v)
+        {
+            mean += x;
+        }
+        mean /= v.Length;
+        double acc = 0;
+        foreach (var x in v)
+        {
+            acc += (x - mean) * (x - mean);
+        }
+        return Math.Sqrt(acc / v.Length);
+    }
+}

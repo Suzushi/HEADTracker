@@ -21,6 +21,14 @@ public sealed class PoseEstimator
     private readonly Mat _kMat;
     private readonly Mat _dMat;
 
+    // Previous frame's PnP solution, reused as the extrinsic guess for the next
+    // iterative solve. Seeding the solver keeps it temporally continuous; without
+    // it solvePnP restarts from the frontal guess every frame and, on a near
+    // symmetric frontal face, can flip between the two pitch solutions -- the
+    // up/down "buzz" seen when looking straight at the screen.
+    private Mat? _prevRvec;
+    private Mat? _prevTvec;
+
     /// <summary>Reject solutions whose reprojection RMS exceeds this many pixels.</summary>
     public double MaxRmsPx { get; set; } = 4.0;
 
@@ -28,6 +36,15 @@ public sealed class PoseEstimator
     {
         _kMat = intrinsics.KMat();
         _dMat = intrinsics.DMat();
+    }
+
+    /// <summary>Drop the temporal guess so the next solve starts fresh (face re-acquisition).</summary>
+    public void Reset()
+    {
+        _prevRvec?.Dispose();
+        _prevTvec?.Dispose();
+        _prevRvec = null;
+        _prevTvec = null;
     }
 
     public PnpResult Solve(Point2f[] points2D, Vec3[] modelPoints3D)
@@ -73,11 +90,21 @@ public sealed class PoseEstimator
             }
             else
             {
+                // Seed the iterative solver with the previous frame's pose when we
+                // have one; this is what keeps the solution continuous frame-to-frame.
+                bool guess = _prevRvec != null && _prevTvec != null;
+                if (guess)
+                {
+                    _prevRvec!.CopyTo(rvec);
+                    _prevTvec!.CopyTo(tvec);
+                }
                 Cv2.SolvePnP(objMat, imgMat, _kMat, _dMat, rvec, tvec,
-                    useExtrinsicGuess: false, flags: SolvePnPMethod.Iterative);
+                    useExtrinsicGuess: guess, flags: SolvePnPMethod.Iterative);
             }
             if (rvec.Empty() || tvec.Empty())
             {
+                rvec.Dispose();
+                tvec.Dispose();
                 return new PnpResult(false, Mat3.Identity, Vec3.Zero, double.MaxValue);
             }
 
@@ -90,6 +117,13 @@ public sealed class PoseEstimator
                 rotMat.At<double>(1, 0), rotMat.At<double>(1, 1), rotMat.At<double>(1, 2),
                 rotMat.At<double>(2, 0), rotMat.At<double>(2, 1), rotMat.At<double>(2, 2));
             var t = new Vec3(tvec.At<double>(0), tvec.At<double>(1), tvec.At<double>(2));
+
+            // Remember this solution as the next frame's extrinsic guess.
+            _prevRvec?.Dispose();
+            _prevTvec?.Dispose();
+            _prevRvec = rvec.Clone();
+            _prevTvec = tvec.Clone();
+
             rvec.Dispose();
             tvec.Dispose();
             return new PnpResult(true, r, t, rms);

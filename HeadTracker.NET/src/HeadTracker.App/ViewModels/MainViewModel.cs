@@ -20,6 +20,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly DispatcherTimer _uiTimer;
     private readonly Action _openSettings;
     private readonly Action _exitApplication;
+    private bool _previewVisible = true;
 
     public MainViewModel(TrackerService service, Action openSettings, Action exitApplication)
     {
@@ -202,6 +203,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void OnUiTick(object? sender, EventArgs e) => RefreshStatus();
 
+    /// <summary>Called by the window on visibility/state changes. Stops preview rendering here and
+    /// tells the pipeline to skip DrawPreview while the window is hidden (to tray) or minimized.</summary>
+    public void SetPreviewVisible(bool visible)
+    {
+        _previewVisible = visible;
+        _service.PreviewEnabled = visible;
+    }
+
     private void RefreshStatus()
     {
         if (IsRunning != _service.IsRunning)
@@ -223,17 +232,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
             RawPoseText = $"raw yaw {rawYpr.X,6:F1}  pitch {rawYpr.Y,6:F1}  roll {rawYpr.Z,6:F1}  " +
                           $"t=({rawT.X:F2},{rawT.Y:F2},{rawT.Z:F2})";
 
-            using var frame = _service.GetPreview();
-            if (frame != null)
+            if (_previewVisible)
             {
-                // Preview frames are continuous BGR 8UC3; copy into a frozen Bgr24 source.
-                int stride = (int)frame.Step();
-                var pixels = new byte[stride * frame.Rows];
-                Marshal.Copy(frame.Data, pixels, 0, pixels.Length);
-                var bmp = BitmapSource.Create(frame.Cols, frame.Rows, 96, 96,
-                    PixelFormats.Bgr24, null, pixels, stride);
-                bmp.Freeze();
-                Preview = bmp;
+                using var frame = _service.GetPreview();
+                if (frame != null)
+                {
+                    // Preview frames are continuous BGR 8UC3; copy into a frozen Bgr24 source.
+                    int stride = (int)frame.Step();
+                    var pixels = new byte[stride * frame.Rows];
+                    Marshal.Copy(frame.Data, pixels, 0, pixels.Length);
+                    var bmp = BitmapSource.Create(frame.Cols, frame.Rows, 96, 96,
+                        PixelFormats.Bgr24, null, pixels, stride);
+                    bmp.Freeze();
+                    Preview = bmp;
+                }
             }
         }
         else

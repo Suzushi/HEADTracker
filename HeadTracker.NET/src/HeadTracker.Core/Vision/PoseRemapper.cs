@@ -14,6 +14,12 @@ public sealed class PoseRemapper
     private readonly AccelaFilter _accela;
     private readonly AccelaFilter _accela2;
 
+    // Optional adaptive low-pass on the Euler output (yaw/pitch/roll), applied at
+    // the processing rate before Accela. Null when use_one_euro is off.
+    private readonly OneEuroFilter? _oneEuroYaw;
+    private readonly OneEuroFilter? _oneEuroPitch;
+    private readonly OneEuroFilter? _oneEuroRoll;
+
     // Optional per-axis response curves; null means fall back to the legacy expo parameter.
     private readonly ResponseCurve? _curveTransX;
     private readonly ResponseCurve? _curveTransY;
@@ -39,6 +45,13 @@ public sealed class PoseRemapper
         _accela2 = new AccelaFilter(settings.AccelaRotSmoothing, settings.AccelaPosSmoothing,
             settings.AccelaRotDeadzone, settings.AccelaPosDeadzone);
 
+        if (settings.UseOneEuro)
+        {
+            _oneEuroYaw = new OneEuroFilter(settings.OneEuroMinCutoff, settings.OneEuroBeta, settings.OneEuroDerivCutoff);
+            _oneEuroPitch = new OneEuroFilter(settings.OneEuroMinCutoff, settings.OneEuroBeta, settings.OneEuroDerivCutoff);
+            _oneEuroRoll = new OneEuroFilter(settings.OneEuroMinCutoff, settings.OneEuroBeta, settings.OneEuroDerivCutoff);
+        }
+
         _curveTransX = ResponseCurve.TryParse(settings.CurveTransX);
         _curveTransY = ResponseCurve.TryParse(settings.CurveTransY);
         _curveTransZ = ResponseCurve.TryParse(settings.CurveTransZ);
@@ -48,7 +61,7 @@ public sealed class PoseRemapper
     }
 
     /// <summary>Feed a world-frame pose (legacy passes R*Rface and the PnP translation).</summary>
-    public void OnPose(in Mat3 rWorld, in Vec3 tWorld)
+    public void OnPose(in Mat3 rWorld, in Vec3 tWorld, double dt = 1.0 / 60.0)
     {
         lock (_gate)
         {
@@ -75,6 +88,14 @@ public sealed class PoseRemapper
                     Remap(eul.X, _settings.InpBoundYaw, _settings.OutBoundYaw, _settings.ExpoEulYaw, _curveEulYaw),
                     Remap(eul.Y, _settings.InpBoundPitch, _settings.OutBoundPitch, _settings.ExpoEulPitch, _curveEulPitch),
                     Remap(eul.Z, _settings.InpBoundRoll, _settings.OutBoundRoll, _settings.ExpoEulRoll, _curveEulRoll));
+            }
+
+            if (_oneEuroYaw != null)
+            {
+                eul = new Vec3(
+                    _oneEuroYaw.Filter(eul.X, dt),
+                    _oneEuroPitch!.Filter(eul.Y, dt),
+                    _oneEuroRoll!.Filter(eul.Z, dt));
             }
 
             _eulLast = eul;
@@ -133,6 +154,9 @@ public sealed class PoseRemapper
             _inited = false;
             _accela.Center();
             _accela2.Center();
+            _oneEuroYaw?.Reset();
+            _oneEuroPitch?.Reset();
+            _oneEuroRoll?.Reset();
         }
     }
 

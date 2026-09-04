@@ -52,6 +52,7 @@ public sealed class TrackingPipeline : IDisposable
     private Exception? _lastError;
     private volatile bool _mirror;
     private volatile bool _paused;
+    private volatile bool _previewEnabled = true;
 
     /// <summary>Final output pose (remapped + filtered), at the legacy 250 Hz when freetrack is active.</summary>
     public event Action<Pose6D>? OutputPose;
@@ -80,6 +81,15 @@ public sealed class TrackingPipeline : IDisposable
     {
         get => _paused;
         set => _paused = value;
+    }
+
+    /// <summary>When false, <see cref="DrawPreview"/> is skipped entirely (no per-frame full-frame
+    /// clone or 66-point overlay). The UI clears this while the main window is hidden or minimized
+    /// so an invisible preview costs nothing -- a real saving when a game is eating the CPU.</summary>
+    public bool PreviewEnabled
+    {
+        get => _previewEnabled;
+        set => _previewEnabled = value;
     }
 
     /// <param name="assetRoot">Directory containing scrfd_500m_bnkps_shape640x640.onnx and landmark_models/.</param>
@@ -115,11 +125,23 @@ public sealed class TrackingPipeline : IDisposable
         }
         _running = true;
         _clock.Restart();
-        _processThread = new Thread(ProcessLoop) { IsBackground = true, Name = "HeadTrackerPipeline" };
+        // AboveNormal keeps the tracking + publish threads scheduled when a CPU-heavy game
+        // (e.g. MSFS) saturates the cores, which is exactly when smooth tracking matters most.
+        _processThread = new Thread(ProcessLoop)
+        {
+            IsBackground = true,
+            Name = "HeadTrackerPipeline",
+            Priority = ThreadPriority.AboveNormal,
+        };
         _processThread.Start();
         if (_remapper.UseAccelaPath)
         {
-            _outputThread = new Thread(OutputLoop) { IsBackground = true, Name = "HeadTrackerOutput" };
+            _outputThread = new Thread(OutputLoop)
+            {
+                IsBackground = true,
+                Name = "HeadTrackerOutput",
+                Priority = ThreadPriority.AboveNormal,
+            };
             _outputThread.Start();
         }
     }
@@ -211,6 +233,9 @@ public sealed class TrackingPipeline : IDisposable
 
         if (_firstSolvePose)
         {
+            // Re-acquisition: drop the PnP temporal guess so a stale pose cannot drag the
+            // fresh solve toward the previous (possibly far-off) head position.
+            _pnp.Reset();
             var det = SelectBest(_scrfd.Detect(frame), default);
             if (!det.Found)
             {
@@ -355,7 +380,7 @@ public sealed class TrackingPipeline : IDisposable
             rWorld = pnp.R.Multiply(Mat3.RFace);
         }
 
-        _remapper.OnPose(rWorld, tOut);
+        _remapper.OnPose(rWorld, tOut, dt);
         RawPose?.Invoke(QuatD.FromRotationMatrix(pnp.R.Multiply(Mat3.RFace)).ToYprDegrees(), pnp.T);
 
         if (!_remapper.UseAccelaPath)
@@ -567,6 +592,13 @@ public sealed class TrackingPipeline : IDisposable
 
     private void DrawPreview(Mat frame, Rect2d? roi, Point2f[]? landmarks)
     {
+        // Skip the per-frame full-frame clone + 66-point overlay entirely when nobody is
+        // watching (main window hidden/minimized while gaming). Pure savings, auto-resumes.
+        if (!_previewEnabled)
+        {
+            return;
+        }
+
         // Ownership of this Mat transfers to _preview; it is disposed by the
         // next DrawPreview call or by Dispose(), always under _previewGate.
         var show = frame.Clone();

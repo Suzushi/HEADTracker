@@ -41,7 +41,14 @@ public partial class MainWindow : Window
         PreviewKeyDown += OnPreviewKeyDown;
         Closing += OnWindowClosing;
         SourceInitialized += OnSourceInitialized;
+        // Preview only matters while the window is on screen; hiding to tray or minimizing
+        // stops both the UI bitmap copy and the pipeline's per-frame DrawPreview.
+        IsVisibleChanged += (_, _) => UpdatePreviewVisible();
+        StateChanged += (_, _) => UpdatePreviewVisible();
     }
+
+    private void UpdatePreviewVisible() =>
+        _viewModel.SetPreviewVisible(IsVisible && WindowState != WindowState.Minimized);
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {

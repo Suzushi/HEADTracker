@@ -25,6 +25,7 @@ public sealed class TrackerService : IDisposable
     private Pose6D _lastOutput;
     private Vec3 _lastRawYpr;
     private Vec3 _lastRawT;
+    private bool _previewEnabled = true;
 
     /// <summary>Raised on the hotkey polling thread when a joystick hotkey fires (UI status text).</summary>
     public event Action<string>? HotkeyAction;
@@ -62,6 +63,22 @@ public sealed class TrackerService : IDisposable
 
     public Mat? GetPreview() => _pipeline?.TryGetPreview();
 
+    /// <summary>Forwards to the pipeline so DrawPreview is skipped while the main window is hidden
+    /// or minimized. Latched and reapplied on Start so it survives a pipeline restart.</summary>
+    public bool PreviewEnabled
+    {
+        get => _previewEnabled;
+        set
+        {
+            _previewEnabled = value;
+            var pipeline = _pipeline;
+            if (pipeline != null)
+            {
+                pipeline.PreviewEnabled = value;
+            }
+        }
+    }
+
     public string OutputsDescription =>
         _publisher == null ? "" : string.Join(" + ", new[]
         {
@@ -95,6 +112,7 @@ public sealed class TrackerService : IDisposable
                 string csv = Path.Combine(assetRoot, "facetracknoir supported games.csv");
                 _publisher = new PosePublisher(Settings, File.Exists(csv) ? csv : null);
                 _pipeline = new TrackingPipeline(Settings, camera, assetRoot);
+                _pipeline.PreviewEnabled = _previewEnabled;
                 _pipeline.OutputPose += pose =>
                 {
                     lock (_poseGate)
