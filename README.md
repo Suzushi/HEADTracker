@@ -51,7 +51,7 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 ```powershell
 cd HeadTracker.NET
 dotnet build HeadTracker.sln -c Release
-dotnet test  HeadTracker.sln -c Release          # 62 unit tests
+dotnet test  HeadTracker.sln -c Release          # 67 unit tests
 # self-contained, single-folder release (assets are copied automatically):
 dotnet publish src/HeadTracker.App/HeadTracker.App.csproj -c Release -r win-x64 --self-contained true -o publish
 ```
@@ -82,6 +82,10 @@ compatible with the legacy FOXTracker config, so an existing `config.yaml` loads
 keys are ignored and missing keys fall back to defaults; a malformed file is quarantined
 (`config.bad.yaml`) instead of bricking the app.
 
+> 👉 **See the [Parameter Tuning Guide](docs/tuning_guide.md)** for what every setting does,
+> recommended starting values, and which knobs to turn for common goals (smoother tracking,
+> higher FPS, better mapping, fixing jitter).
+
 ## Project layout
 
 ```
@@ -97,9 +101,9 @@ config.yaml                 # runtime configuration (repo root)
 
 ## Legacy C++ implementation
 
-The original C++/Qt FOXTracker sources (`src/`, `inc/`, `lib/`, `*.pro`, `CMakeLists.txt`) are
-retained in this repository **for reference only** and are no longer the active code path. The
-.NET rewrite in `HeadTracker.NET/` supersedes them.
+The original C++/Qt FOXTracker implementation is **not part of this repository** — it has been fully
+superseded by the C#/.NET rewrite in `HeadTracker.NET/`, which is the only active code path here. To
+browse the legacy C++ sources, see the upstream [@xuhao1/FOXTracker](https://github.com/xuhao1/FOXTracker).
 
 ## CI
 
@@ -148,3 +152,6 @@ C++/Qt 版 FOXTracker（作者 [@xuhao1](https://github.com/xuhao1/FOXTracker)�
   FSA-Net + EKF 融合、托盘常驻、单实例、摄像头重启按钮、中英文界面。
 
 更多细节见应用内 **设置** 窗口（Camera / Output / Fusion & Hotkeys / Mapping / Smoothing，含中英文界面与工具提示）。
+
+> 👉 每个参数的完整含义、推荐起步值与常见调法（更平滑、更高帧率、映射、消除抖动）见
+> **[参数调整说明书](docs/tuning_guide.md)**（中英双语）。
