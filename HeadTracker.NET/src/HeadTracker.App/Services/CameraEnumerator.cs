@@ -31,6 +31,19 @@ public static class CameraEnumerator
     // CLSID_VideoInputDeviceCategory
     private static readonly Guid ClsidVideoInputDeviceCategory = new("860BB310-5D01-11d0-BD3B-00A0C911CE86");
 
+    private static List<CameraDevice>? _cache;
+
+    /// <summary>Enumerates once and remembers the result. Call at startup, before any capture
+    /// graph exists: re-enumerating while a stream is running has been seen to take the whole
+    /// process down silently on some camera drivers.</summary>
+    public static void WarmCache() => _cache = GetVideoCaptureDevices();
+
+    /// <summary>The cached device list; enumerates on first use only.</summary>
+    public static List<CameraDevice> GetCached() => _cache ??= GetVideoCaptureDevices();
+
+    /// <summary>Re-enumerates and replaces the cache. Only safe while no capture is streaming.</summary>
+    public static void RefreshCache() => _cache = GetVideoCaptureDevices();
+
     /// <summary>
     /// Returns the connected capture devices in DSHOW order. Must be called on an
     /// STA thread (the WPF UI thread is STA).

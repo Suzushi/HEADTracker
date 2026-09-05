@@ -56,6 +56,8 @@ public sealed class TrackerService : IDisposable
     public double ReadMs => _pipeline?.ReadMs ?? -1;
     public double ProcessMs => _pipeline?.ProcessMs ?? 0;
     public string Resolution => _pipeline != null ? $"{_pipeline.FrameWidth}\u00d7{_pipeline.FrameHeight}" : "--";
+    /// <summary>[DIAG] The (backend/format/resolution) combo negotiation settled on.</summary>
+    public string CaptureCombo { get; private set; } = "--";
     public bool IsPaused => _pipeline?.Paused ?? false;
     public string JoystickStatus => _hotkeys.Status;
 
@@ -159,6 +161,7 @@ public sealed class TrackerService : IDisposable
             var outcome = new CameraNegotiator().Negotiate(Settings.CameraId, Settings, Settings.Fps);
             if (outcome.Camera != null)
             {
+                CaptureCombo = CameraNegotiator.Describe(outcome.Combo);
                 return outcome.Camera; // left open by the successful probe
             }
 
@@ -166,6 +169,7 @@ public sealed class TrackerService : IDisposable
             var best = new CameraCapture();
             if (OpenCombo(best, outcome.Combo))
             {
+                CaptureCombo = CameraNegotiator.Describe(outcome.Combo) + " (best-effort)";
                 return best;
             }
             LastError = best.LastError ?? $"Cannot open camera {Settings.CameraId}";
@@ -173,10 +177,12 @@ public sealed class TrackerService : IDisposable
             return null;
         }
 
+        var wanted = new CameraNegotiator.Combo(Settings.CaptureApi, Settings.CaptureFourcc,
+            Settings.CaptureWidth, Settings.CaptureHeight);
         var forced = new CameraCapture();
-        if (OpenCombo(forced, new CameraNegotiator.Combo(Settings.CaptureApi, Settings.CaptureFourcc,
-                Settings.CaptureWidth, Settings.CaptureHeight)))
+        if (OpenCombo(forced, wanted))
         {
+            CaptureCombo = CameraNegotiator.Describe(wanted) + " (forced)";
             return forced;
         }
         LastError = forced.LastError ?? $"Cannot open camera {Settings.CameraId}";

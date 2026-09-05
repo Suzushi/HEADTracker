@@ -154,4 +154,19 @@ public partial class App : Application
             // Logging must never become the next crash.
         }
     }
+
+    /// <summary>Appends a one-line note to crash.log. Used to leave evidence for silent deaths
+    /// (window destroyed without an exception) that no exception handler can observe.</summary>
+    public static void LogNote(string note)
+    {
+        try
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "crash.log");
+            File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] note: {note}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Logging must never become the next crash.
+        }
+    }
 }

@@ -31,6 +31,7 @@
     <!-- ============ status texts ============ -->
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_idle">空闲</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_starting">正在启动摄像头并加载模型…</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="busy_negotiating">正在预热摄像头并协商最佳采集组合（后端 / 格式 / 分辨率），期间其他按钮不可操作，请稍候…</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_stopping">正在停止…</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_restarting_camera">正在重启摄像头…</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_stopped">已停止</system:String>

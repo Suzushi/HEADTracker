@@ -31,6 +31,7 @@
     <!-- ============ status texts ============ -->
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_idle">Idle</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_starting">Starting camera &amp; loading models...</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="busy_negotiating">Warming up the camera and negotiating the best capture combo (backend / format / resolution). Other controls stay disabled until this finishes...</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_stopping">Stopping...</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_restarting_camera">Restarting camera...</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_stopped">Stopped</system:String>

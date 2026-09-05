@@ -35,11 +35,18 @@ public partial class MainWindow : Window
         _viewModel = new MainViewModel(service, OpenSettings, RequestExit);
         DataContext = _viewModel;
 
+        // Enumerate cameras now, before any capture graph exists: re-enumerating while a
+        // stream is running has been seen to take the process down silently on some drivers.
+        CameraEnumerator.WarmCache();
+
         // Force instantiation of the lazily-created tray icon resource.
         _trayIcon = (TaskbarIcon)FindResource("TrayIcon");
 
         PreviewKeyDown += OnPreviewKeyDown;
         Closing += OnWindowClosing;
+        // Silent deaths (window destroyed without an exception) leave no crash.log entry;
+        // these notes make the next one attributable.
+        Closed += (_, _) => App.LogNote("main window closed");
         SourceInitialized += OnSourceInitialized;
         // Preview only matters while the window is on screen; hiding to tray or minimizing
         // stops both the UI bitmap copy and the pipeline's per-frame DrawPreview.
@@ -124,6 +131,7 @@ public partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
+        App.LogNote($"main window closing (reallyExit={_reallyExit})");
         if (!_reallyExit)
         {
             // Keep tracking in the background; exit only via the tray menu.

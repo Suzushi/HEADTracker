@@ -23,7 +23,15 @@ public partial class SettingsWindow : Window
         _edit = SettingsStore.Load(service.ConfigPath);
         _langOnOpen = LanguageService.Current;
         DataContext = _edit;
-        RefreshCameraList();
+        try
+        {
+            RefreshCameraList();
+        }
+        catch (Exception ex)
+        {
+            // A driver fault here must not take the main window down with it.
+            App.LogNote($"settings RefreshCameraList: {ex}");
+        }
     }
 
     private async void OnSaveClick(object sender, RoutedEventArgs e)
@@ -46,17 +54,26 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void OnRefreshCameras(object sender, RoutedEventArgs e) => RefreshCameraList();
+    private void OnRefreshCameras(object sender, RoutedEventArgs e)
+    {
+        // Re-enumerating while a capture graph is streaming can crash some drivers; while
+        // running we only re-show the cache, and re-probe the hardware when idle.
+        if (!_service.IsRunning)
+        {
+            CameraEnumerator.RefreshCache();
+        }
+        RefreshCameraList();
+    }
 
     /// <summary>
-    /// Fills the camera ComboBox with the currently connected DirectShow devices.
-    /// If enumeration finds nothing we offer plain numeric ids (0..4) as a manual
-    /// fallback, and if the saved id isn't connected we keep it selectable so the
-    /// user's config is never silently rewritten.
+    /// Fills the camera ComboBox from the cached DirectShow device list (captured at startup,
+    /// before any stream existed). If enumeration found nothing we offer plain numeric ids
+    /// (0..4) as a manual fallback, and if the saved id isn't connected we keep it selectable
+    /// so the user's config is never silently rewritten.
     /// </summary>
     private void RefreshCameraList()
     {
-        var list = new List<CameraEnumerator.CameraDevice>(CameraEnumerator.GetVideoCaptureDevices());
+        var list = new List<CameraEnumerator.CameraDevice>(CameraEnumerator.GetCached());
 
         if (list.Count == 0)
         {

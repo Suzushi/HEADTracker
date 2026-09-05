@@ -18,6 +18,7 @@ public sealed class CameraCapture : IFrameSource
     private long _consumedSequence = -1;
     private double _captureFps;
     private double _readMs;
+    private volatile bool _resetStats;
 
     public bool IsOpen => _capture != null;
     public int FrameWidth { get; private set; }
@@ -29,6 +30,17 @@ public sealed class CameraCapture : IFrameSource
     /// last cap.Read blocking time in ms. Separates a capture bottleneck from a CPU one.</summary>
     public double CaptureFps => _captureFps;
     public double ReadMs => _readMs;
+
+    /// <summary>Zeroes the rate/read stats and restarts the measurement window, so the next
+    /// <see cref="CaptureFps"/> reflects steady-state only. The first window after Open includes
+    /// camera start-up (first read blocks hundreds of ms), which badly understates the true rate
+    /// -- negotiation must skip it or it ranks a slow backend above a fast one.</summary>
+    public void ResetCaptureStats()
+    {
+        _captureFps = 0;
+        _readMs = 0;
+        _resetStats = true;
+    }
 
     public bool Open(int cameraId, int width, int height, double fps, bool autoExpo, double gain, double expo,
         string? api = "dshow", string? fourcc = "")
@@ -159,6 +171,13 @@ public sealed class CameraCapture : IFrameSource
                 _latest?.Dispose();
                 _latest = frame.Clone();
                 _sequence++;
+            }
+
+            if (_resetStats)
+            {
+                _resetStats = false;
+                frames = 0;
+                fpsSw.Restart();
             }
 
             frames++;

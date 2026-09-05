@@ -13,8 +13,11 @@ namespace HeadTracker.Core.Vision;
 /// </summary>
 public sealed class CameraNegotiator
 {
-    /// <summary>How long each candidate combo is probed before judging its frame rate.</summary>
-    private const double ProbeSeconds = 0.8;
+    /// <summary>Let the camera start up (first read blocks hundreds of ms) before measuring.</summary>
+    private const int WarmupMs = 600;
+
+    /// <summary>Steady-state window measured after the warm-up is discarded.</summary>
+    private const int ProbeMs = 900;
 
     /// <summary>A candidate capture configuration to probe.</summary>
     public readonly record struct Combo(string Api, string Fourcc, int Width, int Height);
@@ -83,7 +86,11 @@ public sealed class CameraNegotiator
                 continue;
             }
 
-            Thread.Sleep((int)(ProbeSeconds * 1000));
+            // The first frames after Open are start-up, not steady state: discard them, then
+            // measure a clean window, or a slow backend with a fast start outranks a good one.
+            Thread.Sleep(WarmupMs);
+            probe.ResetCaptureStats();
+            Thread.Sleep(ProbeMs);
             double fps = probe.CaptureFps;
             log?.Invoke($"negotiate {Describe(combo)}: {fps:F1} fps");
 
@@ -104,6 +111,6 @@ public sealed class CameraNegotiator
         return new Outcome(null, bestCombo, bestFps, false);
     }
 
-    private static string Describe(Combo c) =>
+    public static string Describe(Combo c) =>
         $"{c.Api}/{(c.Fourcc.Length == 0 ? "auto" : c.Fourcc)}/{c.Width}x{c.Height}";
 }
