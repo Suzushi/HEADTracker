@@ -201,21 +201,16 @@ public sealed class TrackerSettings
     public int LandmarkDetectMethod { get; set; } = 4;
 
     // --- joystick hotkeys -----------------------------------------------------
-    [YamlMember(Alias = "hotkey_joystick_name0")]
-    public string HotkeyJoystickName0 { get; set; } = "";
-
-    [YamlMember(Alias = "hotkey_joystick_button0")]
-    public int HotkeyJoystickButton0 { get; set; } = 0;
-
-    [YamlMember(Alias = "hotkey_joystick_name1")]
-    public string HotkeyJoystickName1 { get; set; } = "";
-
-    [YamlMember(Alias = "hotkey_joystick_button1")]
-    public int HotkeyJoystickButton1 { get; set; } = 0;
+    // Removed: re-center is not worth spending a joystick button on, and shipping a factory
+    // config bound to one developer's throttle base hijacked that button for anyone who owned
+    // the same hardware. Existing config.yaml files may still carry hotkey_joystick_* keys;
+    // SettingsStore deserializes with IgnoreUnmatchedProperties, so they are simply dropped.
 
     /// <summary>Global keyboard hotkey that re-centers the pose, e.g. "Ctrl+X" (opentrack-style).
-    /// Registered via Win32 RegisterHotKey so it fires even when the game has focus. Parsed by
-    /// HotkeyParser; a bare F-key (F13) needs no modifier. Empty/invalid leaves it unregistered.</summary>
+    /// Registered via Win32 RegisterHotKey so it fires even when the game has focus; the app layer
+    /// owns it on a dedicated thread rather than the UI thread, which a busy sim can starve.
+    /// Parsed by HotkeyParser; a bare F-key (F13) needs no modifier. Empty/invalid leaves it
+    /// unregistered.</summary>
     [YamlMember(Alias = "recenter_hotkey")]
     public string RecenterHotkey { get; set; } = "Ctrl+X";
 
@@ -271,11 +266,15 @@ public sealed class TrackerSettings
     [YamlMember(Alias = "out_bound_roll")]
     public double OutBoundRoll { get; set; } = 43.5;
 
+    // Game-side rotation range at full deflection. The legacy values (178.5 yaw / 103.5 pitch
+    // against 25.75 / 15.95 input) are a ~6.9x gain: 0.2 deg of residual head jitter became
+    // 1.4 deg of view wander, so holding a fixed gaze meant holding perfectly still. ~4.6x keeps
+    // the same head sweep usable in DCS-class cockpits while leaving the noise to the filters.
     [YamlMember(Alias = "out_bound_pitch")]
-    public double OutBoundPitch { get; set; } = 103.5;
+    public double OutBoundPitch { get; set; } = 75;
 
     [YamlMember(Alias = "out_bound_yaw")]
-    public double OutBoundYaw { get; set; } = 178.5;
+    public double OutBoundYaw { get; set; } = 120;
 
     [YamlMember(Alias = "expo_eul_roll")]
     public double ExpoEulRoll { get; set; } = 0.0;
@@ -325,10 +324,13 @@ public sealed class TrackerSettings
     [YamlMember(Alias = "accela_pos_deadzone")]
     public double AccelaPosDeadzone { get; set; } = 0.03;
 
-    // --- One-Euro filter (adaptive low-pass on the Euler output) ----------------
+    // --- One-Euro filter (adaptive low-pass on the raw head pose) ---------------
     // Off by default so legacy configs are unaffected; config.yaml opts in. Applied
-    // per-axis to yaw/pitch/roll at the processing rate, before Accela, to kill the
-    // at-rest "buzz" without adding lag to real head movement.
+    // per-axis to yaw/pitch/roll and to X/Y/Z at the processing rate, on the raw head
+    // pose -- ahead of the bounds/expo gain and of Accela -- so the cutoffs and betas
+    // are in physical units (degrees, metres) whatever sensitivity the user maps them
+    // onto. Run it after the gain and the derivative term scales with the gain too,
+    // opening the cutoff by that factor and letting the at-rest buzz through unfiltered.
     [YamlMember(Alias = "use_one_euro")]
     public bool UseOneEuro { get; set; } = false;
 
@@ -343,6 +345,16 @@ public sealed class TrackerSettings
     /// <summary>Cutoff in Hz for the derivative low-pass.</summary>
     [YamlMember(Alias = "one_euro_deriv_cutoff")]
     public double OneEuroDerivCutoff { get; set; } = 1.0;
+
+    /// <summary>Cutoff in Hz at rest for the translation axes (X/Y/Z, metres).</summary>
+    [YamlMember(Alias = "one_euro_pos_min_cutoff")]
+    public double OneEuroPosMinCutoff { get; set; } = 1.0;
+
+    /// <summary>Speed coefficient for the translation axes. Must not be shared with the rotation
+    /// beta: the derivative here is in m/s (a deliberate head slide is ~0.5) rather than deg/s
+    /// (a deliberate head turn is ~100), so the rotation value would leave position wide open.</summary>
+    [YamlMember(Alias = "one_euro_pos_beta")]
+    public double OneEuroPosBeta { get; set; } = 0.5;
 
     // --- derived (not persisted) ---------------------------------------------
     /// <summary>UI convenience: pitch_offset_fsa_pnp in degrees (stored in radians).</summary>

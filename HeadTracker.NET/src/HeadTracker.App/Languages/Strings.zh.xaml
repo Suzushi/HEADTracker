@@ -27,6 +27,7 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="mirror_off">镜像：关</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="mirror_tooltip">水平翻转摄像头画面（抵消手机前置摄像头的自拍镜像）</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="hotkeys_hint">快捷键：F9 启动/停止 · C 回中 · 全局回中热键（默认 Ctrl+X，可在设置修改）游戏内有效。关闭窗口后在托盘继续跟踪。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="hotkey_reg_failed">全局回中热键 {0} 注册失败（Win32 错误 {1}）——1409 表示已被其它程序占用，可在设置的“融合与热键”页换一个组合键。窗口内的 C 键仍可回中。</system:String>
 
     <!-- ============ status texts ============ -->
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_idle">空闲</system:String>
@@ -39,10 +40,6 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_tracking">跟踪中 → {0}</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_tracking_noout">跟踪中（配置未启用任何输出）</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_recentered">已回中（中立位姿）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_recentered_joystick">已回中（摇杆）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_paused_joystick">已暂停（摇杆）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_resumed_joystick">已恢复（摇杆）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="paused_tag"> | 已暂停</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="perf_format">帧率 {0} | 跟踪 {1} | 重投影 {2}px | 错误 {3}</system:String>
 
     <!-- ============ settings window ============ -->
@@ -85,13 +82,9 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_use_fsa">FSA-Net 第二测量源</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_ekf_dt">EKF 预测步长 (秒)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_pitch_offset">FSA↔PnP 俯仰偏移 (度)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey">回中热键（键盘）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey_tip">格式：Ctrl+X、Ctrl+Alt+X，或单独的 F 键如 F13。注册为全局热键，游戏获得焦点时也生效；若与其它程序冲突可在此修改。</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_name0">摇杆名称（回中）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_btn0">按钮编号（回中）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_name1">摇杆名称（暂停）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_btn1">按钮编号（暂停）</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="fusion_note">键盘：上方的回中热键注册为全局热键，游戏内也有效。摇杆按钮经 DirectInput 后台轮询，游戏获得焦点时依然有效。FSA-Net 融合需要先启用 EKF。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey">回中热键</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey_tip">格式：Ctrl+X、Ctrl+Alt+X，或单独的 F 键如 F13。注册为全局热键并由独立线程处理，游戏获得焦点时也生效；若与其它程序冲突可在此修改。若游戏本身以管理员身份运行，也请以管理员身份启动本程序，否则 Windows（UIPI）会屏蔽该热键。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="fusion_note">上方的回中热键注册为全局热键，并由独立线程处理，因此在榨干 CPU 的模拟器占据前台时依然有效。但它要求本程序的权限级别不低于游戏：Windows（UIPI）会屏蔽发往较低完整性进程的热键。FSA-Net 融合需要先启用 EKF。</system:String>
 
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_col_x">X / 偏航</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_col_y">Y / 俯仰</system:String>
@@ -110,9 +103,17 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_rot_dz">旋转死区（度）</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_pos_smooth">平移平滑</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_pos_dz">平移死区（米）</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_use">启用 One-Euro 自适应低通</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_min_cutoff">旋转静止截止频率 (Hz)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_beta">旋转速度系数 beta</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_deriv_cutoff">导数截止频率 (Hz)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_pos_min_cutoff">平移静止截止频率 (Hz)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_pos_beta">平移速度系数 beta</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_note">One-Euro 作用于头部原始角度与位移（在映射增益之前）：截止频率越低越稳、静止抖动越小，但转向越滞后；beta 越高跟随越快、通过的抖动也越多。旋转与平移单位不同（度/秒 与 米/秒），需分别调。</system:String>
 
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_save">保存并应用</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_saving">应用中…</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_invalid_number">“{0}”不是有效数字，本次未保存任何内容。请修正红框标出的输入框后重试。</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_cancel">取消</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_ok">确定</system:String>
 

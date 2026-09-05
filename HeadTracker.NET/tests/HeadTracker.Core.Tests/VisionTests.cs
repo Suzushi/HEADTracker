@@ -221,6 +221,88 @@ public class PoseRemapperTests
         Assert.Null(remapper.Tick(0.004));
         Assert.Null(remapper.SnapshotUnfiltered());
     }
+
+    [Fact]
+    public void OneEuro_SmoothsHeadAngles_IndependentOfMappedGain()
+    {
+        // One-Euro's cutoff is minCutoff + beta*|dx/dt|, so it is NOT scale invariant. It used to
+        // run after the bounds/expo gain, which multiplied the derivative by that gain (~6.9x with
+        // the default bounds) and pushed the cutoff up with it until the filter passed the at-rest
+        // buzz through untouched -- jitter reached the game however strong the settings looked.
+        // Filtering the head angles instead leaves the gain to do nothing but scale the result.
+        double[] headYaw = { 0.0, 0.4, -0.3, 0.5, 0.1, -0.2, 0.3 };
+
+        double[] raw = Run(headYaw, oneEuro: false, outBoundYaw: 30);
+        double[] smoothed = Run(headYaw, oneEuro: true, outBoundYaw: 30);
+        double[] doubledGain = Run(headYaw, oneEuro: true, outBoundYaw: 60);
+
+        // The gain stage is now downstream of the filter: double it and the output doubles exactly.
+        for (int i = 0; i < headYaw.Length; i++)
+        {
+            Assert.Equal(smoothed[i] * 2, doubledGain[i], 9);
+        }
+
+        // And the filter really does attenuate a jittery sequence rather than passing it through.
+        Assert.True(Spread(smoothed) < Spread(raw),
+            $"one-euro did not attenuate: spread {Spread(smoothed):F4} vs raw {Spread(raw):F4}");
+    }
+
+    [Fact]
+    public void OneEuro_SmoothsTranslation_WithItsOwnCutoff()
+    {
+        // Position is in metres and moves orders of magnitude slower than the head rotates, so it
+        // gets its own cutoff/beta. Prove the translation axes are filtered at all and that they
+        // answer to one_euro_pos_min_cutoff rather than to the rotation setting.
+        double[] slideMetres = { 0.0, 0.004, -0.003, 0.005, 0.001, -0.002, 0.003 };
+
+        double[] RunPos(double posMinCutoff)
+        {
+            var settings = new TrackerSettings
+            {
+                UseFt = true,
+                UseAccela = false,
+                UseOneEuro = true,
+                OneEuroPosMinCutoff = posMinCutoff,
+            };
+            var remapper = new PoseRemapper(settings);
+            var result = new double[slideMetres.Length];
+            for (int i = 0; i < slideMetres.Length; i++)
+            {
+                remapper.OnPose(Mat3.Identity, new Vec3(slideMetres[i], 0, 0), 1.0 / 30.0);
+                result[i] = remapper.Tick(0.004)!.Value.Tx;
+            }
+            return result;
+        }
+
+        double spreadSteady = Spread(RunPos(1.0));   // configured default
+        double spreadWideOpen = Spread(RunPos(40.0)); // cutoff above the sample rate: no smoothing
+        Assert.True(spreadSteady < spreadWideOpen,
+            $"one_euro_pos_min_cutoff is not wired to the translation axes: {spreadSteady:F6} vs {spreadWideOpen:F6}");
+    }
+
+    /// <summary>Runs a yaw sequence through the mapped (freetrack) path at 30 Hz.</summary>
+    private static double[] Run(double[] headYaw, bool oneEuro, double outBoundYaw)
+    {
+        var settings = new TrackerSettings
+        {
+            UseFt = true,        // take the mapped path: bounds + expo
+            UseAccela = false,   // so Tick hands back the mapped pose untouched
+            UseOneEuro = oneEuro,
+            OutBoundYaw = outBoundYaw,
+        };
+        var remapper = new PoseRemapper(settings);
+        var result = new double[headYaw.Length];
+        for (int i = 0; i < headYaw.Length; i++)
+        {
+            double a = headYaw[i] * Math.PI / 180.0;
+            remapper.OnPose(new Mat3(Math.Cos(a), -Math.Sin(a), 0, Math.Sin(a), Math.Cos(a), 0, 0, 0, 1),
+                Vec3.Zero, 1.0 / 30.0);
+            result[i] = remapper.Tick(0.004)!.Value.Yaw;
+        }
+        return result;
+    }
+
+    private static double Spread(double[] v) => v.Max() - v.Min();
 }
 
 public class CameraIntrinsicsTests

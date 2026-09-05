@@ -7,7 +7,6 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
-    <PackageReference Include="SharpDX.DirectInput" Version="4.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +27,12 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>HeadTracker</AssemblyName>
     <ApplicationIcon>..\..\..\icon.ico</ApplicationIcon>
+    <!-- No <ApplicationManifest> on purpose: the app runs at whatever integrity level its caller
+         has. It was briefly elevated to fix an in-game re-center hotkey that turned out to be a
+         UI-thread starvation problem instead (see Services/GlobalHotkey.cs), and elevation costs
+         every user a UAC prompt per launch plus a cross-integrity-level shared memory handle.
+         If someone's game does run elevated, UIPI blocks the hotkey; crash.log records elevated=
+         so that case stays diagnosable without paying for it up front. -->
   </PropertyGroup>
 
 </Project>

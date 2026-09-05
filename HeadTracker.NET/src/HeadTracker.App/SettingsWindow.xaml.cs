@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using HeadTracker.App.Services;
 using HeadTracker.Core.Configuration;
 
@@ -36,6 +37,25 @@ public partial class SettingsWindow : Window
 
     private async void OnSaveClick(object sender, RoutedEventArgs e)
     {
+        // Numeric boxes commit on focus loss now, so half-typed states ("0.", "-", a cleared
+        // field) stay editable instead of being reverted mid-keystroke. Enter activates this
+        // default button without moving focus, though: flush the field the caret is still in,
+        // and refuse to save what the user cannot have meant -- a silent fallback to the
+        // previous number is worse than an error.
+        if (Keyboard.FocusedElement is TextBox focused)
+        {
+            string typed = focused.Text;
+            var binding = focused.GetBindingExpression(TextBox.TextProperty);
+            binding?.UpdateSource();
+            if (binding is { HasError: true })
+            {
+                MessageBox.Show(this, string.Format(Loc.Tr("set_invalid_number"), typed),
+                    Loc.Tr("settings_title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                focused.Focus();
+                return;
+            }
+        }
+
         _edit.Normalize();
         SaveButton.IsEnabled = false;
         SaveButton.Content = Loc.Tr("btn_saving");

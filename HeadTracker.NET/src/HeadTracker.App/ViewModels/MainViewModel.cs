@@ -32,7 +32,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _uiTimer.Tick += OnUiTick;
         _uiTimer.Start();
         _mirrorOn = service.Mirror;
-        _service.HotkeyAction += OnHotkeyAction;
         LanguageService.LanguageChanged += OnLanguageChanged;
         RefreshStatus();
     }
@@ -46,12 +45,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             ApplyRunningStatus();
         }
         RefreshStatus();
-    }
-
-    private void OnHotkeyAction(string message)
-    {
-        // Raised on the joystick polling thread.
-        Application.Current?.Dispatcher.BeginInvoke(() => StatusText = message);
     }
 
     public TrackerService Service => _service;
@@ -78,6 +71,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _statusText = Loc.Tr("status_idle");
+
+    /// <summary>Non-empty only while the global re-center hotkey cannot do its job (registration
+    /// refused, or this process is not elevated while an elevated game holds the foreground).
+    /// Rendered under the hotkey hint; owned by MainWindow, which does the Win32 registration.</summary>
+    [ObservableProperty]
+    private string _hotkeyWarning = "";
 
     [ObservableProperty]
     private string _perfText = Loc.Tr("perf_format").Replace("{0}", "--").Replace("{1}", "--").Replace("{2}", "--").Replace("{3}", "0");
@@ -196,6 +195,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
         StatusText = IsRunning ? Loc.Tr("status_recentered") : StatusText;
     }
 
+    /// <summary>
+    /// Status feedback for a re-center that was performed off the UI thread, by the global hotkey
+    /// thread. Translation happens inside the dispatcher callback too: <c>Loc.Tr</c> reads WPF
+    /// application resources, which are not safe to touch from another thread.
+    /// </summary>
+    public void NotifyRecentered() =>
+        Application.Current?.Dispatcher.BeginInvoke(() =>
+            StatusText = IsRunning ? Loc.Tr("status_recentered") : StatusText);
+
     [RelayCommand]
     private void OpenSettings() => _openSettings();
 
@@ -227,8 +235,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                        _service.Fps.ToString("F1"),
                        Loc.Tr(_service.FaceTracked ? "yes" : "no"),
                        _service.RmsPx.ToString("F2"),
-                       _service.Errors) +
-                       (_service.IsPaused ? Loc.Tr("paused_tag") : "");
+                       _service.Errors);
             OutputPoseText = $"yaw {output.Yaw,7:F2}  pitch {output.Pitch,7:F2}  roll {output.Roll,7:F2}";
             OutputTransText = $"x {output.Tx,6:F2}  y {output.Ty,6:F2}  z {output.Tz,6:F2}";
             RawPoseText = $"raw yaw {rawYpr.X,6:F1}  pitch {rawYpr.Y,6:F1}  roll {rawYpr.Z,6:F1}  " +
@@ -263,7 +270,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _uiTimer.Stop();
-        _service.HotkeyAction -= OnHotkeyAction;
         LanguageService.LanguageChanged -= OnLanguageChanged;
         _service.Dispose();
     }

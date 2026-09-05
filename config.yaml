@@ -21,10 +21,6 @@ use_ekf: false
 disp_duration: 30
 disp_max_series_size: 10000
 fsa_pnp_mixture_rate: 0.51000000000000001
-hotkey_joystick_name0: WINWING THROTTLE BASE2 + F18 HANDLE
-hotkey_joystick_button0: 104
-hotkey_joystick_name1: ""
-hotkey_joystick_button1: 0
 landmark_detect_method: 1
 pitch_offset_fsa_pnp: 0.16406095
 cervical_face_model_x: 0.16
@@ -48,8 +44,8 @@ inp_bound_roll: 44.649999999999999
 inp_bound_pitch: 15.949999999999999
 inp_bound_yaw: 25.75
 out_bound_roll: 43.5
-out_bound_pitch: 103.5
-out_bound_yaw: 178.5
+out_bound_pitch: 75
+out_bound_yaw: 120
 expo_eul_roll: 0
 expo_eul_pitch: 0
 expo_eul_yaw: 0.20999999999999999
@@ -63,3 +59,5 @@ use_one_euro: true
 one_euro_min_cutoff: 1.2
 one_euro_beta: 0.25
 one_euro_deriv_cutoff: 1.0
+one_euro_pos_min_cutoff: 1.0
+one_euro_pos_beta: 0.5

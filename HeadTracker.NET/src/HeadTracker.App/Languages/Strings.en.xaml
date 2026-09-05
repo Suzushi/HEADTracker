@@ -27,6 +27,7 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="mirror_off">Mirror: Off</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="mirror_tooltip">Horizontally mirror the camera image (cancels phone front-camera selfie mirroring)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="hotkeys_hint">Hotkeys: F9 start/stop · C re-center · global re-center hotkey (default Ctrl+X, configurable in Settings) works in-game. Closing this window keeps tracking in the tray.</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="hotkey_reg_failed">Global re-center hotkey {0} failed to register (Win32 error {1}) — 1409 means another program already holds it; pick a different combination in Settings. The in-window C key still re-centers.</system:String>
 
     <!-- ============ status texts ============ -->
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_idle">Idle</system:String>
@@ -39,10 +40,6 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_tracking">Tracking -&gt; {0}</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_tracking_noout">Tracking (no output enabled in config)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_recentered">Re-centered (neutral pose)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_recentered_joystick">Re-centered (joystick)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_paused_joystick">Paused (joystick)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="status_resumed_joystick">Resumed (joystick)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="paused_tag"> | PAUSED</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="perf_format">fps {0} | tracked {1} | rms {2}px | errors {3}</system:String>
 
     <!-- ============ settings window ============ -->
@@ -85,13 +82,9 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_use_fsa">FSA-Net 2nd measurement</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_ekf_dt">EKF predict dt (s)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_pitch_offset">FSA↔PnP pitch offset (deg)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey">Re-center hotkey (keyboard)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey_tip">Format: Ctrl+X, Ctrl+Alt+X, or a bare F-key like F13. Registered globally, so it works while the game has focus. Change it here if it clashes with another app.</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_name0">Joystick name (re-center)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_btn0">Button index (re-center)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_name1">Joystick name (pause)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_joy_btn1">Button index (pause)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="fusion_note">Keyboard: the re-center hotkey above is registered globally, so it works in-game. Joystick buttons are polled via DirectInput in background mode, so they work while the game has focus. FSA-Net fusion requires EKF to be enabled.</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey">Re-center hotkey</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_recenter_hotkey_tip">Format: Ctrl+X, Ctrl+Alt+X, or a bare F-key like F13. Registered globally and handled on its own thread, so it works while the game has focus; change it here if it clashes with another app. If the game itself runs as administrator, start HeadTracker as administrator too — otherwise Windows (UIPI) blocks the hotkey.</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="fusion_note">The re-center hotkey above is registered globally and handled on a dedicated thread, so it keeps working while a CPU-saturating sim holds the foreground. It does need HeadTracker to run at least as elevated as the game: Windows (UIPI) blocks hotkeys sent to a lower-integrity process. FSA-Net fusion requires EKF to be enabled.</system:String>
 
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_col_x">X / Yaw</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_col_y">Y / Pitch</system:String>
@@ -110,9 +103,17 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_rot_dz">Rotation deadzone (deg)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_pos_smooth">Translation smoothing</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_pos_dz">Translation deadzone (m)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_use">Use One-Euro adaptive low-pass</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_min_cutoff">Rotation cutoff at rest (Hz)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_beta">Rotation speed beta</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_deriv_cutoff">Derivative cutoff (Hz)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_pos_min_cutoff">Translation cutoff at rest (Hz)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_pos_beta">Translation speed beta</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_oe_note">One-Euro filters the raw head angles and translation, ahead of the mapping gain: a lower cutoff is steadier and removes more at-rest jitter but lags more when you turn, while a higher beta follows fast motion with less lag and passes more jitter. Rotation and translation use different units (deg/s versus m/s), so tune them separately.</system:String>
 
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_save">Save &amp; Apply</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_saving">Applying...</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="set_invalid_number">'{0}' is not a valid number, so nothing was saved. Fix the field outlined in red and try again.</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_cancel">Cancel</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="btn_ok">OK</system:String>
 

@@ -20,23 +20,16 @@ public sealed class TrackerService : IDisposable
     private CameraCapture? _camera;
     private TrackingPipeline? _pipeline;
     private PosePublisher? _publisher;
-    private readonly JoystickHotkeyService _hotkeys;
 
     private Pose6D _lastOutput;
     private Vec3 _lastRawYpr;
     private Vec3 _lastRawT;
     private bool _previewEnabled = true;
 
-    /// <summary>Raised on the hotkey polling thread when a joystick hotkey fires (UI status text).</summary>
-    public event Action<string>? HotkeyAction;
-
     public TrackerService(string configPath)
     {
         ConfigPath = configPath;
         Settings = SettingsStore.Load(configPath);
-        _hotkeys = new JoystickHotkeyService(Settings);
-        _hotkeys.HotkeyPressed += OnJoystickHotkey;
-        _hotkeys.Start();
     }
 
     public string ConfigPath { get; }
@@ -58,8 +51,6 @@ public sealed class TrackerService : IDisposable
     public string Resolution => _pipeline != null ? $"{_pipeline.FrameWidth}\u00d7{_pipeline.FrameHeight}" : "--";
     /// <summary>[DIAG] The (backend/format/resolution) combo negotiation settled on.</summary>
     public string CaptureCombo { get; private set; } = "--";
-    public bool IsPaused => _pipeline?.Paused ?? false;
-    public string JoystickStatus => _hotkeys.Status;
 
     public (Pose6D Output, Vec3 RawYpr, Vec3 RawT) LatestPoses()
     {
@@ -233,32 +224,6 @@ public sealed class TrackerService : IDisposable
 
     public void ForceRedetect() => _pipeline?.ResetDetection();
 
-    /// <summary>Toggle the legacy pause(): processing freezes, last pose keeps publishing.</summary>
-    public bool TogglePause()
-    {
-        var pipeline = _pipeline;
-        if (pipeline == null)
-        {
-            return false;
-        }
-        pipeline.Paused = !pipeline.Paused;
-        return pipeline.Paused;
-    }
-
-    private void OnJoystickHotkey(int slot)
-    {
-        if (slot == 0)
-        {
-            Recenter();
-            HotkeyAction?.Invoke(Loc.Tr("status_recentered_joystick"));
-        }
-        else if (slot == 1 && _pipeline != null)
-        {
-            bool paused = TogglePause();
-            HotkeyAction?.Invoke(Loc.Tr(paused ? "status_paused_joystick" : "status_resumed_joystick"));
-        }
-    }
-
     /// <summary>Live mirror toggle; persisted to config.yaml so it survives restarts.</summary>
     public bool Mirror
     {
@@ -289,7 +254,6 @@ public sealed class TrackerService : IDisposable
         Stop();
         SettingsStore.Save(ConfigPath, settings);
         Settings = settings;
-        _hotkeys.UpdateSettings(settings);
         if (wasRunning)
         {
             Start();
@@ -298,8 +262,6 @@ public sealed class TrackerService : IDisposable
 
     public void Dispose()
     {
-        _hotkeys.HotkeyPressed -= OnJoystickHotkey;
-        _hotkeys.Dispose();
         Stop();
     }
 }

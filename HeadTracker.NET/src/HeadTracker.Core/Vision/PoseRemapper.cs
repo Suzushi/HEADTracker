@@ -14,11 +14,15 @@ public sealed class PoseRemapper
     private readonly AccelaFilter _accela;
     private readonly AccelaFilter _accela2;
 
-    // Optional adaptive low-pass on the Euler output (yaw/pitch/roll), applied at
-    // the processing rate before Accela. Null when use_one_euro is off.
+    // Optional adaptive low-pass on the raw head pose (yaw/pitch/roll in degrees, X/Y/Z in
+    // metres), applied at the processing rate before the bounds remap and before Accela.
+    // Null when use_one_euro is off.
     private readonly OneEuroFilter? _oneEuroYaw;
     private readonly OneEuroFilter? _oneEuroPitch;
     private readonly OneEuroFilter? _oneEuroRoll;
+    private readonly OneEuroFilter? _oneEuroTransX;
+    private readonly OneEuroFilter? _oneEuroTransY;
+    private readonly OneEuroFilter? _oneEuroTransZ;
 
     // Optional per-axis response curves; null means fall back to the legacy expo parameter.
     private readonly ResponseCurve? _curveTransX;
@@ -50,6 +54,11 @@ public sealed class PoseRemapper
             _oneEuroYaw = new OneEuroFilter(settings.OneEuroMinCutoff, settings.OneEuroBeta, settings.OneEuroDerivCutoff);
             _oneEuroPitch = new OneEuroFilter(settings.OneEuroMinCutoff, settings.OneEuroBeta, settings.OneEuroDerivCutoff);
             _oneEuroRoll = new OneEuroFilter(settings.OneEuroMinCutoff, settings.OneEuroBeta, settings.OneEuroDerivCutoff);
+            // Translation moves in metres and two orders of magnitude slower than the head
+            // rotates, so it gets its own cutoff/beta instead of sharing the rotation ones.
+            _oneEuroTransX = new OneEuroFilter(settings.OneEuroPosMinCutoff, settings.OneEuroPosBeta, settings.OneEuroDerivCutoff);
+            _oneEuroTransY = new OneEuroFilter(settings.OneEuroPosMinCutoff, settings.OneEuroPosBeta, settings.OneEuroDerivCutoff);
+            _oneEuroTransZ = new OneEuroFilter(settings.OneEuroPosMinCutoff, settings.OneEuroPosBeta, settings.OneEuroDerivCutoff);
         }
 
         _curveTransX = ResponseCurve.TryParse(settings.CurveTransX);
@@ -78,6 +87,25 @@ public sealed class PoseRemapper
             var tRel = initialInv.Multiply(tWorld - _initialT);
             var eul = q.ToYprDegrees();
 
+            // One-Euro runs on the raw head pose (degrees, metres), strictly BEFORE the
+            // bounds/expo gain stage. Its cutoff is minCutoff + beta*|dx/dt|, so it is not scale
+            // invariant: filtering the amplified value multiplies the derivative -- and hence the
+            // cutoff -- by the gain (5-7x with typical bounds), which opens the filter wide and
+            // passes the at-rest buzz straight through. Here the parameters mean what they say,
+            // in degrees of head rotation and metres of head translation, whatever sensitivity
+            // the user maps them onto.
+            if (_oneEuroYaw != null)
+            {
+                eul = new Vec3(
+                    _oneEuroYaw.Filter(eul.X, dt),
+                    _oneEuroPitch!.Filter(eul.Y, dt),
+                    _oneEuroRoll!.Filter(eul.Z, dt));
+                tRel = new Vec3(
+                    _oneEuroTransX!.Filter(tRel.X, dt),
+                    _oneEuroTransY!.Filter(tRel.Y, dt),
+                    _oneEuroTransZ!.Filter(tRel.Z, dt));
+            }
+
             if (UseAccelaPath)
             {
                 tRel = new Vec3(
@@ -88,14 +116,6 @@ public sealed class PoseRemapper
                     Remap(eul.X, _settings.InpBoundYaw, _settings.OutBoundYaw, _settings.ExpoEulYaw, _curveEulYaw),
                     Remap(eul.Y, _settings.InpBoundPitch, _settings.OutBoundPitch, _settings.ExpoEulPitch, _curveEulPitch),
                     Remap(eul.Z, _settings.InpBoundRoll, _settings.OutBoundRoll, _settings.ExpoEulRoll, _curveEulRoll));
-            }
-
-            if (_oneEuroYaw != null)
-            {
-                eul = new Vec3(
-                    _oneEuroYaw.Filter(eul.X, dt),
-                    _oneEuroPitch!.Filter(eul.Y, dt),
-                    _oneEuroRoll!.Filter(eul.Z, dt));
             }
 
             _eulLast = eul;
@@ -157,6 +177,9 @@ public sealed class PoseRemapper
             _oneEuroYaw?.Reset();
             _oneEuroPitch?.Reset();
             _oneEuroRoll?.Reset();
+            _oneEuroTransX?.Reset();
+            _oneEuroTransY?.Reset();
+            _oneEuroTransZ?.Reset();
         }
     }
 

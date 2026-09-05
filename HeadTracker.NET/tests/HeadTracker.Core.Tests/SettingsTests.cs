@@ -89,10 +89,11 @@ public class SettingsTests
             Assert.True(s.SendPosedataUdp);
             Assert.Equal(0.001, s.CovQLm, 12);
             Assert.Equal(0.083176377110267125, s.CovQFsa, 12);
+            // The hotkey_joystick_* keys are still in the fixture above on purpose: they were
+            // removed from TrackerSettings, but a real user's config.yaml still contains them.
+            // Loading must neither throw nor lose the neighbouring values, which is exactly what
+            // IgnoreUnmatchedProperties buys — hence the assertions on both sides of them.
             Assert.Equal(0.51, s.FsaPnpMixtureRate, 10);
-            Assert.Equal("WINWING THROTTLE BASE2 + F18 HANDLE", s.HotkeyJoystickName0);
-            Assert.Equal(104, s.HotkeyJoystickButton0);
-            Assert.Equal("", s.HotkeyJoystickName1);
             Assert.Equal(4, s.LandmarkDetectMethod);
             Assert.Equal(0.16406095, s.PitchOffsetFsaPnp, 8);
             Assert.Equal(0.22, s.CameraGain, 12);
@@ -155,7 +156,7 @@ public class SettingsTests
                 UdpHost = "192.168.1.10",
                 UseFt = true,
                 LandmarkDetectMethod = 1,
-                HotkeyJoystickName0 = "TEST JOY",
+                RecenterHotkey = "Ctrl+Alt+F13",
                 AccelaRotSmoothing = 0.123,
                 OutBoundYaw = 123.5,
             };
@@ -169,7 +170,7 @@ public class SettingsTests
             Assert.True(loaded.UseFt);
             Assert.Equal(1, loaded.LandmarkDetectMethod);
             Assert.Equal(112, loaded.LandmarkNetSize);
-            Assert.Equal("TEST JOY", loaded.HotkeyJoystickName0);
+            Assert.Equal("Ctrl+Alt+F13", loaded.RecenterHotkey);
             Assert.Equal(0.123, loaded.AccelaRotSmoothing, 10);
             Assert.Equal(123.5, loaded.OutBoundYaw, 10);
         }

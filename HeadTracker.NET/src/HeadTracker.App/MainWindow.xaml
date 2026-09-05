@@ -94,6 +94,20 @@
 
                     <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"
                                Text="{DynamicResource hotkeys_hint}" />
+                    <!-- Collapsed while empty: the hotkey is usually fine, and a permanently
+                         reserved orange line would just train users to ignore it. -->
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#C0392B"
+                               Text="{Binding HotkeyWarning}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

@@ -141,13 +141,22 @@ public partial class App : Application
         e.SetObserved();
     }
 
+    /// <summary>Serializes crash.log writes. UI thread, global hotkey thread, pipeline threads and
+    /// any thread that throws all append here; concurrent File.AppendAllText would raise an
+    /// IOException that the catch below swallows, silently dropping exactly the line that the
+    /// next investigation depends on.</summary>
+    private static readonly object LogGate = new();
+
     private static void LogCrash(Exception? ex, string source)
     {
         try
         {
             var path = Path.Combine(AppContext.BaseDirectory, "crash.log");
-            File.AppendAllText(path,
-                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {source}:{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}");
+            var text = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {source}:{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}";
+            lock (LogGate)
+            {
+                File.AppendAllText(path, text);
+            }
         }
         catch
         {
@@ -156,13 +165,18 @@ public partial class App : Application
     }
 
     /// <summary>Appends a one-line note to crash.log. Used to leave evidence for silent deaths
-    /// (window destroyed without an exception) that no exception handler can observe.</summary>
+    /// (window destroyed without an exception) that no exception handler can observe.
+    /// Callable from any thread.</summary>
     public static void LogNote(string note)
     {
         try
         {
             var path = Path.Combine(AppContext.BaseDirectory, "crash.log");
-            File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] note: {note}{Environment.NewLine}");
+            var text = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] note: {note}{Environment.NewLine}";
+            lock (LogGate)
+            {
+                File.AppendAllText(path, text);
+            }
         }
         catch
         {

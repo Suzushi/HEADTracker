@@ -51,7 +51,6 @@ public sealed class TrackingPipeline : IDisposable
     private long _errorCount;
     private Exception? _lastError;
     private volatile bool _mirror;
-    private volatile bool _paused;
     private volatile bool _previewEnabled = true;
 
     /// <summary>Final output pose (remapped + filtered), at the legacy 250 Hz when freetrack is active.</summary>
@@ -82,13 +81,6 @@ public sealed class TrackingPipeline : IDisposable
     {
         get => _mirror;
         set => _mirror = value;
-    }
-
-    /// <summary>Legacy pause(): keep grabbing frames but freeze processing and pose updates.</summary>
-    public bool Paused
-    {
-        get => _paused;
-        set => _paused = value;
     }
 
     /// <summary>When false, <see cref="DrawPreview"/> is skipped entirely (no per-frame full-frame
@@ -191,13 +183,6 @@ public sealed class TrackingPipeline : IDisposable
             var frame = _source.GrabLatest();
             if (frame == null)
             {
-                Thread.Sleep(2);
-                continue;
-            }
-
-            if (_paused)
-            {
-                frame.Dispose();
                 Thread.Sleep(2);
                 continue;
             }
