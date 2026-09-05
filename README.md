@@ -28,8 +28,8 @@ same `config.yaml`.
 - **Response curve editor** — a visual, per-axis input→output curve (monotone cubic) that
   replaces the single legacy *expo* number. Drag control points, add/remove, or reset from expo.
 - **Quality of life** — live preview, system tray, global re-center hotkey (default **Ctrl+X**,
-  works while the game has focus), joystick button hotkeys, single-instance guard, camera
-  restart button, and full **English / 中文** UI.
+  works while the game has focus), single-instance guard, camera restart button, and full
+  **English / 中文** UI.
 
 ## Requirements
 
@@ -44,6 +44,10 @@ Grab the latest self-contained build (`HeadTracker-win-x64`) from the
 [Releases](https://github.com/Suzushi/HEADTracker/releases) once published, unzip, and run
 `HeadTracker.exe`. The self-contained publish includes the .NET runtime, so no install is needed.
 
+There is **no UAC prompt**: the app runs unelevated. The one exception to be aware of — if your sim
+itself runs as administrator, start HeadTracker as administrator too, because Windows (UIPI) blocks
+global hotkeys sent to a process whose integrity level is below the foreground window's.
+
 ## Build from source
 
 Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
@@ -51,7 +55,7 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 ```powershell
 cd HeadTracker.NET
 dotnet build HeadTracker.sln -c Release
-dotnet test  HeadTracker.sln -c Release          # 67 unit tests
+dotnet test  HeadTracker.sln -c Release          # 74 unit tests
 # self-contained, single-folder release (assets are copied automatically):
 dotnet publish src/HeadTracker.App/HeadTracker.App.csproj -c Release -r win-x64 --self-contained true -o publish
 ```
@@ -71,6 +75,22 @@ No other software (e.g. opentrack) needs to run.
 | Start / stop tracking | **F9** |
 | Re-center (neutral pose) | **C** (window focused) |
 | Re-center (global, works in-game) | **Ctrl+X** (configurable in Settings → Fusion & Hotkeys) |
+
+The global hotkey is registered on a **dedicated message-loop thread**, and that is not a detail.
+`WM_HOTKEY` is a *queued* message: bound to the WPF UI thread, it runs only once that thread gets
+scheduled — and the two tracking threads run at `AboveNormal` priority with one of them CPU-bound,
+so a sim that already saturates the machine can leave the key press sitting in the queue until you
+alt-tab out and the CPU frees up. The hotkey thread performs the re-center itself (the remapper's
+neutral pose is behind a lock) and only hands the status text back to the UI.
+
+Elevation is a second, independent condition: Windows (UIPI) drops `WM_HOTKEY` — and low-level
+keyboard hook callbacks — sent to a medium-integrity process while an elevated window has the
+foreground. The app ships unelevated so nobody pays a UAC prompt for a case that usually does not
+apply; run it as administrator if your sim is elevated.
+
+Both are diagnosable rather than silent: `crash.log` records `parsed=`, `registered=`, `error=` and
+`elevated=` for every binding, and on every press a `hotkey fired` line plus a UI-thread latency
+probe that shows how long the UI thread took to pick up work at that moment.
 
 Closing the main window keeps tracking running in the system tray; exit from the tray menu.
 
@@ -125,7 +145,6 @@ LGPL (see [LICENSE](LICENSE)), matching the original project.
 - [YamlDotNet](https://github.com/aaubry/YamlDotNet)
 - [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet)
 - [Hardcodet.NotifyIcon.Wpf](https://github.com/hardcodet/wpf-notifyicon)
-- [SharpDX.DirectInput](https://github.com/sharpdx/SharpDX)
 - Models/architectures: [SCRFD (insightface)](https://github.com/deepinsight/insightface),
   [OpenSeeFace](https://github.com/emilianavt/OpenSeeFace), [FSA-Net](https://github.com/shamangary/FSA-Net)
 

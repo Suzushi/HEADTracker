@@ -44,9 +44,11 @@ use_npclient: true
 use_accela: true           # output smoothing / 输出平滑
 accela_rot_deadzone: 2.5
 accela_rot_smoothing: 0.08
-use_one_euro: true         # adaptive low-pass on angles / 角度自适应低通
+use_one_euro: true         # adaptive low-pass on angles + translation / 角度与平移自适应低通
 one_euro_min_cutoff: 1.2
 one_euro_beta: 0.25
+one_euro_pos_min_cutoff: 1.0   # translation axes are in metres / 平移轴单位为米
+one_euro_pos_beta: 0.5
 use_ekf: false             # leave off unless you want EKF/FSA fusion and have CPU headroom
                            # 除非要 EKF/FSA 融合且 CPU 有余量，否则关闭
 ```
@@ -60,12 +62,13 @@ Start here, confirm the view tracks your head correctly, then fine-tune mapping 
 |---|---|---|
 | **Smoother, less jitter** / 更平滑、去抖动 | `use_one_euro: true` + lower `one_euro_min_cutoff` (0.8–1.2); `use_accela: true` + raise `accela_rot_deadzone` (2–4) | One-Euro adapts: strong smoothing at rest, less lag when moving. / One-Euro 会自适应：静止重滤波、运动降延迟。 |
 | **Lower latency / less lag** / 更低延迟 | raise `one_euro_beta` (0.25→0.5) and `one_euro_min_cutoff`; lower `accela_rot_smoothing` and `accela_rot_deadzone` | Less filtering = snappier but noisier. / 滤波越弱越跟手但越抖。 |
+| **View drifts / wobbles while your head is still** / 头不动视角仍漂移晃动 | lower `one_euro_min_cutoff` (0.6–1.0); for position drift lower `one_euro_pos_min_cutoff`; then check the mapping gain (`out_bound_*` ÷ `inp_bound_*`) isn't extreme | The gain multiplies whatever noise survives filtering: 6.9x turns 0.2° of jitter into 1.4° of wander. / 增益会放大滤波后的残余噪声：6.9 倍会把 0.2° 抖动变成 1.4° 游走。 |
 | **Higher FPS on a weak CPU / heavy games** / 弱机或大型游戏提帧率 | lower `landmark_detect_method` to 1 (or 0); raise `detect_duration` to 20–30; **keep the main window hidden/minimized in-game** | The landmark model is the main per-frame cost; hiding the window auto-skips preview drawing. / 关键点模型是每帧主要开销；隐藏窗口会自动跳过预览绘制。 |
 | **View rotates too far / not far enough** / 视角转动幅度过大/不足 | `out_bound_yaw/pitch/roll` (game-side range); `inp_bound_*` (sensitivity) | See **§4 Mapping** below. |
 | **Pitch buzzes up/down while looking straight** / 平视时上下震动 | lower `one_euro_min_cutoff`; raise `accela_rot_deadzone`; check `out_bound_pitch` isn't extreme | This build already adds SolvePnP frame-continuity + One-Euro to reduce it. / 本版已用 PnP 帧间连续 + One-Euro 抑制此现象。 |
 | **Green / garbled / tiled frames** / 画面绿屏、花屏、错位 | `capture_api: msmf`; or `capture_fourcc: mjpg`; then click **Restart Camera** | Common with virtual/phone cameras (Iriun, etc.). / 虚拟/手机摄像头常见。 |
 | **Left/right reversed** / 左右方向相反 | toggle `mirror_camera` | For selfie-mirrored front cameras. / 用于前置摄像头的自拍镜像。 |
-| **Re-center without alt-tabbing** / 不切窗口回中 | `recenter_hotkey` (global, default `Ctrl+X`); or bind a joystick button (`hotkey_joystick_name0` + `hotkey_joystick_button0`) | Global hotkey works while the game has focus. / 全局热键在游戏获得焦点时也有效。 |
+| **Re-center without alt-tabbing** / 不切窗口回中 | `recenter_hotkey` (global, default `Ctrl+X`) | The hotkey runs on its own message-loop thread rather than the UI thread: `WM_HOTKEY` is a queued message, and with both tracking threads at `AboveNormal` (one of them CPU-bound) a sim that saturates the machine would otherwise leave the key press sitting in the queue until you alt-tab out. It also needs HeadTracker to run at least as elevated as the game — UIPI drops hotkeys sent to a lower-integrity process — so if the sim runs as administrator, run HeadTracker as administrator too. / 热键跑在独立的消息循环线程上而非 UI 线程：`WM_HOTKEY` 是排队消息，两条跟踪线程都是 `AboveNormal`（其中一条持续占满 CPU），游戏再榨干机器时按键会滞留在队列里，直到你切出窗口才被处理。它还要求本程序的权限级别不低于游戏——UIPI 会丢弃发往较低完整性进程的热键——所以若模拟器以管理员身份运行，本程序也要以管理员身份运行。 |
 | **More accurate pose (esp. pitch/depth)** / 姿态更精确（尤其俯仰/深度） | run the **Camera calibration** wizard; raise `landmark_detect_method` to 2–3 | Calibration solves your real lens intrinsics/distortion into `config.yaml`. / 标定求出真实内参与畸变并写入配置。 |
 
 ---
@@ -120,8 +123,8 @@ Settings → **Output** tab. Which game protocols to emit.
 
 ### 3. Fusion & Hotkeys / 融合与热键
 
-Settings → **Fusion** tab. EKF fusion and re-center/pause hotkeys.
-设置 → **融合与热键** 标签页。EKF 融合与回中/暂停热键。
+Settings → **Fusion** tab. EKF fusion and the re-center hotkey.
+设置 → **融合与热键** 标签页。EKF 融合与回中热键。
 
 | Key | Settings UI (EN / 中文) | Default | Description / 说明 |
 |---|---|---|---|
@@ -134,11 +137,15 @@ Settings → **Fusion** tab. EKF fusion and re-center/pause hotkeys.
 | `cov_W` | cov_W | `2.0` | Process noise for angular velocity. Higher = reacts faster to rotation. / 角速度过程噪声；越大对旋转反应越快。 |
 | `ekf_predict_dt` | EKF predict step (s) / EKF 预测步长（秒） | `0.01` | Prediction integration step in seconds. / 预测积分步长（秒）。 |
 | `pitch_offset_fsa_pnp` | FSA↔PnP pitch offset (deg) / FSA↔PnP 俯仰偏移（度） | `≈11°` | Pitch offset (stored in radians) that aligns FSA-Net to PnP. Only matters when FSA is active. / 使 FSA-Net 与 PnP 对齐的俯仰偏移（以弧度存储），仅 FSA 生效时有意义。 |
-| `hotkey_joystick_name0` | Joystick name (recenter) / 摇杆名称（回中） | `""` | DirectInput joystick name whose button re-centers. Empty = disabled. / 用于回中的 DirectInput 摇杆名；空为禁用。 |
-| `hotkey_joystick_button0` | Button number (recenter) / 按钮编号（回中） | `0` | 0-based button index on that joystick (DirectInput exposes up to 128 buttons). / 该摇杆上 0 基的按钮索引（DirectInput 支持最多 128 个按钮）。 |
-| `hotkey_joystick_name1` | Joystick name (pause) / 摇杆名称（暂停） | `""` | Joystick whose button pauses/resumes tracking. / 用于暂停/恢复跟踪的摇杆名。 |
-| `hotkey_joystick_button1` | Button number (pause) / 按钮编号（暂停） | `0` | 0-based button index for pause/resume. / 暂停/恢复的 0 基按钮索引。 |
-| `recenter_hotkey` | Recenter hotkey (keyboard) / 回中热键（键盘） | `Ctrl+X` | Global keyboard hotkey to re-center (works while the game has focus). Format: `Ctrl+X`, `Ctrl+Alt+X`, or a bare F-key like `F13`. Change it if it collides with another app. / 全局回中热键（游戏内有效）；格式 `Ctrl+X`、`Ctrl+Alt+X` 或单 F 键如 `F13`，冲突时可改。 |
+| `recenter_hotkey` | Recenter hotkey / 回中热键 | `Ctrl+X` | Global keyboard hotkey to re-center, handled on its own thread so it survives a CPU-saturating game holding focus. Format: `Ctrl+X`, `Ctrl+Alt+X`, or a bare F-key like `F13`. Change it if it collides with another app; if the game runs as administrator, run HeadTracker as administrator too (UIPI). / 全局回中热键，由独立线程处理，游戏占据前台且榨干 CPU 时依然有效；格式 `Ctrl+X`、`Ctrl+Alt+X` 或单 F 键如 `F13`，冲突时可改；若游戏以管理员身份运行，本程序也需提权（UIPI）。 |
+
+> `hotkey_joystick_name0` / `button0` / `name1` / `button1` have been removed — joystick buttons are
+> no longer polled. Slot 1 was the only trigger the legacy `pause()` ever had, so pause is gone too:
+> tracking now simply runs or is stopped. An older `config.yaml` may still contain those keys; they
+> are ignored on load and disappear on the next save.
+> 已移除 `hotkey_joystick_*` 四个键，不再轮询摇杆按钮。slot 1 原本是旧 `pause()` 唯一的触发者，
+> 因此暂停功能也一并删除：跟踪现在只有运行与停止两种状态。旧 `config.yaml` 里若仍带有这些键，
+> 加载时会被忽略，下次保存时自动消失。
 
 ### 4. Mapping / 映射
 
@@ -155,7 +162,7 @@ The tab shows three columns. For the **translation** rows they are **X / Y / Z**
 | `out_bound_x` / `_y` / `_z` | Output bound (m) / 输出界（米） | `0.77 / 0.73 / 0.75` | Game-side translation range at full deflection. / 满偏时游戏侧的平移范围。 |
 | `expo_trans_x` / `_y` / `_z` | Expo (0..1) / 指数曲线 | `0` | Cubic expo on translation. `0` = linear; higher = finer control near center, faster at the edges. / 平移三次指数曲线；0 为线性，越大中心越细腻、边缘越快。 |
 | `inp_bound_yaw` / `_pitch` / `_roll` | Input bound (deg) / 输入界（度） | `26 / 16 / 45` | How far you turn (deg) to reach full output. **Smaller = more sensitive.** / 转头多少度达到满输出；**越小越灵敏**。 |
-| `out_bound_yaw` / `_pitch` / `_roll` | Output bound (deg) / 输出界（度） | `178.5 / 103.5 / 43.5` | Game-side rotation range at full deflection. / 满偏时游戏侧的旋转范围。 |
+| `out_bound_yaw` / `_pitch` / `_roll` | Output bound (deg) / 输出界（度） | `120 / 75 / 43.5` | Game-side rotation range at full deflection. Gain = `out_bound` ÷ `inp_bound` (~4.6x for yaw); it multiplies residual jitter too, so bigger is not better. / 满偏时游戏侧的旋转范围。增益 = `out_bound` ÷ `inp_bound`（偏航约 4.6 倍）；它同样放大残余抖动，并非越大越好。 |
 | `expo_eul_yaw` / `_pitch` / `_roll` | Expo (0..1) / 指数曲线 | `0` | Cubic expo on rotation (same idea as translation expo). / 旋转三次指数曲线（同平移）。 |
 | `curve_trans_x/y/z`, `curve_eul_yaw/pitch/roll` | *(Response curve editor)* / 编辑响应曲线 | `""` | Per-axis response curve that **overrides Expo** when non-empty. Edit visually via the curve editor; serialized as `-1,-1;x,y;…;1,1`. / 每轴响应曲线，非空时**覆盖 Expo**；在曲线编辑器可视化编辑，序列化为 `-1,-1;x,y;…;1,1`。 |
 
@@ -195,16 +202,25 @@ These are **not** in the Settings window; edit `config.yaml` directly.
 | `cervical_face_model_y` | `0.16` | Neck-pivot Y offset (same conditions as above). / 颈部枢轴 Y 偏移（条件同上）。 |
 | `enable_face_spd_est` | `true` | Feed tracker-derived ground speed into the EKF. **Only when `use_ekf`.** / 把跟踪器推算的地速喂入 EKF；**仅 `use_ekf` 时生效**。 |
 
-**One-Euro filter (adaptive angle smoothing) / One-Euro 滤波（角度自适应平滑）** — enabled with
-`use_one_euro`; applied to yaw/pitch/roll between the pose remap and Accela. 用 `use_one_euro` 开启，
-作用于姿态映射与 Accela 之间的偏航/俯仰/滚转。
+**One-Euro filter (adaptive pose smoothing) / One-Euro 滤波（姿态自适应平滑）** — enabled with
+`use_one_euro`; applied to yaw/pitch/roll **and** to X/Y/Z on the raw head pose, ahead of the
+bounds/expo gain and of Accela. 用 `use_one_euro` 开启，在映射增益与 Accela **之前**作用于原始头部姿态：
+偏航/俯仰/滚转（度）**以及** X/Y/Z 平移（米）。
+
+Running before the gain is what makes the numbers below mean what they say: One-Euro's cutoff grows
+with the measured speed, so filtering *after* the gain would multiply that speed — and the cutoff —
+by the gain, opening the filter exactly when jitter is worst. 在增益之前滤波，下列参数才名副其实：
+One-Euro 的截止频率随速度上升，若在增益**之后**滤波，速度与截止频率会被同倍放大，恰在抖动最严重时
+把滤波器打开。
 
 | Key | Default | Description / 说明 |
 |---|---|---|
-| `use_one_euro` | `false` | Enable the One-Euro adaptive low-pass on the three angles. Shipped config uses `true`. / 对三个角度启用 One-Euro 自适应低通；发布配置为 true。 |
-| `one_euro_min_cutoff` | `1.2` | Cutoff (Hz) at rest. **Lower = smoother / less jitter**, but slightly more lag when still. / 静止时的截止频率（Hz）；**越低越平滑、抖动越少**，但静止时略有延迟。 |
-| `one_euro_beta` | `0.25` | Speed coefficient. **Higher = less lag when moving**, but passes more jitter. / 速度系数；**越高运动时延迟越小**，但会放过更多抖动。 |
-| `one_euro_deriv_cutoff` | `1.0` | Low-pass cutoff (Hz) for the derivative estimate. Rarely needs changing. / 导数估计的低通截止（Hz），一般无需改动。 |
+| `use_one_euro` | `false` | Enable the One-Euro adaptive low-pass (angles **and** translation). Shipped config uses `true`. / 启用 One-Euro 自适应低通（角度**与**平移）；发布配置为 true。 |
+| `one_euro_min_cutoff` | `1.2` | Rotation cutoff (Hz) at rest. **Lower = smoother / less jitter**, but slightly more lag when still. / 旋转静止截止频率（Hz）；**越低越平滑、抖动越少**，但静止时略有延迟。 |
+| `one_euro_beta` | `0.25` | Rotation speed coefficient (per deg/s). **Higher = less lag when moving**, but passes more jitter. / 旋转速度系数（按度/秒）；**越高运动时延迟越小**，但会放过更多抖动。 |
+| `one_euro_deriv_cutoff` | `1.0` | Low-pass cutoff (Hz) for the derivative estimate, shared by rotation and translation. Rarely needs changing. / 导数估计的低通截止（Hz），旋转与平移共用；一般无需改动。 |
+| `one_euro_pos_min_cutoff` | `1.0` | Translation cutoff (Hz) at rest. Lower it when the view drifts while your head is still. / 平移静止截止频率（Hz）；头不动而视角漂移时调低。 |
+| `one_euro_pos_beta` | `0.5` | Translation speed coefficient (per m/s). Do **not** copy the rotation beta here: a deliberate head slide is ~0.5 m/s, a head turn ~100 deg/s. / 平移速度系数（按米/秒）。**不要**照抄旋转 beta：平移约 0.5 米/秒，转头约 100 度/秒。 |
 
 **Reserved / no effect in the .NET version / 保留 — .NET 版暂无作用**
 
@@ -240,8 +256,8 @@ by hand. 标定相关键由标定向导自动写入，通常无需手改。
 4. **Add smoothing last / 最后加平滑**: enable `use_one_euro` and/or `use_accela`, then raise deadzone /
    lower `one_euro_min_cutoff` until at-rest jitter is gone but turning still feels responsive.
    开启 `use_one_euro` 和/或 `use_accela`，逐步加死区/降 `one_euro_min_cutoff`，直到静止不抖、转头仍跟手。
-5. **Bind re-center / 绑定回中**: set `recenter_hotkey` (and/or a joystick button) so you can re-center
-   in-game without alt-tabbing. 设 `recenter_hotkey`（和/或摇杆按钮），游戏内即可回中。
+5. **Bind re-center / 绑定回中**: set `recenter_hotkey` so you can re-center in-game without
+   alt-tabbing. 设 `recenter_hotkey`，游戏内即可回中。
 
 Change **one thing at a time** and re-test — most settings interact. 每次只改**一项**并重新测试——多数参数相互影响。
 
@@ -251,10 +267,12 @@ Change **one thing at a time** and re-test — most settings interact. 每次只
 |---|---|
 | Low FPS in heavy games / 大型游戏帧率低 | `landmark_detect_method: 1`, `detect_duration: 20–30`, hide the main window in-game. / 降关键点档位、升重检测间隔、游戏时隐藏主窗口。 |
 | Jitter at rest / 静止抖动 | `use_one_euro: true` + lower `one_euro_min_cutoff`; `use_accela: true` + raise `accela_rot_deadzone`. |
+| Position drifts while still / 头不动而平移漂移 | Lower `one_euro_pos_min_cutoff`; raise `accela_pos_deadzone`. |
 | Laggy / rubber-bandy view / 视角发飘滞后 | Raise `one_euro_beta` & `one_euro_min_cutoff`; lower Accela smoothing/deadzone; check `out_bound`/`inp_bound` gain isn't extreme. |
 | Pitch buzz looking straight / 平视俯仰震动 | Lower `one_euro_min_cutoff`; raise `accela_rot_deadzone`; reduce an extreme `out_bound_pitch`. |
 | Green / garbled / tiled frames / 绿屏花屏错位 | `capture_api: msmf` or `capture_fourcc: mjpg`, then **Restart Camera**. |
 | Left/right reversed / 左右相反 | Toggle `mirror_camera`. |
+| Hotkey dead in one game only (fine in MSFS, dead in DCS) / 热键只在某个游戏里失效（MSFS 正常、DCS 无效） | Read `crash.log`. Start-up writes `hotkey '…': parsed=…, registered=…, error=…, elevated=…`; every press writes `hotkey fired -> recenter` followed by `ui thread latency at hotkey: N ms`. **No `fired` line at all** → the key never reaches the process: check `elevated=` first (if the game runs as administrator and this says False, UIPI is dropping it — run HeadTracker as administrator); if `elevated=True`, something else is swallowing the key (an in-game overlay, or the game's own low-level keyboard hook). **A `fired` line with no visible effect** → the re-center did happen; look downstream in the output instead. / 看 `crash.log`。启动时写入 `hotkey '…': parsed=…, registered=…, error=…, elevated=…`；每次按键写入 `hotkey fired -> recenter`，紧跟一行 `ui thread latency at hotkey: N ms`。**完全没有 `fired` 行** → 按键根本没到达本进程：先看 `elevated=`（若游戏以管理员身份运行而这里是 False，就是 UIPI 丢弃了它——以管理员身份运行 HeadTracker）；若 `elevated=True`，则是有别的东西吞掉了按键（游戏内覆盖层，或游戏自己的低级键盘钩子）。**有 `fired` 行却没有效果** → 回中确实执行了，问题在输出链路的下游。 |
 | No movement in game / 游戏里没反应 | Enable `use_ft` (DCS) and/or `use_npclient`; in DCS set Head Tracking to *TrackIR*; re-center with the hotkey. / 开启 `use_ft`/`use_npclient`，DCS 里头部跟踪选 TrackIR，用热键回中。 |
 | Tracking lost / ROI drifts / 跟踪丢失 | Lower `detect_duration` (re-detect sooner); improve lighting; the ROI auto-resets on total loss. / 降 `detect_duration`、改善光照；完全丢失时会自动重置 ROI。 |
 
