@@ -48,6 +48,15 @@ public sealed class TrackerService : IDisposable
     public double CaptureFps => _pipeline?.CaptureFps ?? -1;
     public double ReadMs => _pipeline?.ReadMs ?? -1;
     public double ProcessMs => _pipeline?.ProcessMs ?? 0;
+
+    /// <summary>[DIAG] Per-stage ms/frame compact form for the status bar; the full snapshot
+    /// (crash.log perf note) is <see cref="PerfSnapshot"/>. See docs/perf_measurement.md.</summary>
+    public string PerfStages => _pipeline == null ? "--" :
+        $"scrfd {_pipeline.ScrfdMsPerFrame:F1} track {_pipeline.TrackMsPerFrame:F1} lm {_pipeline.LandmarkMsPerFrame:F1} " +
+        $"pnp {_pipeline.PnpMsPerFrame:F1} fsa {_pipeline.FsaMsPerFrame:F1} prev {_pipeline.PreviewMsPerFrame:F1} " +
+        $"wakes {_pipeline.OutputWakesPerSec:F0}/s";
+
+    public string PerfSnapshot() => _pipeline?.PerfSnapshot() ?? "idle";
     public string Resolution => _pipeline != null ? $"{_pipeline.FrameWidth}\u00d7{_pipeline.FrameHeight}" : "--";
     /// <summary>[DIAG] The (backend/format/resolution) combo negotiation settled on.</summary>
     public string CaptureCombo { get; private set; } = "--";

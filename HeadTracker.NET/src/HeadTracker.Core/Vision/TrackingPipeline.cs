@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using HeadTracker.Core.Configuration;
 using OpenCvSharp;
 
@@ -53,6 +54,14 @@ public sealed class TrackingPipeline : IDisposable
     private volatile bool _mirror;
     private volatile bool _previewEnabled = true;
 
+    // [DIAG] Per-stage cost attribution. The accumulators are touched only by the process
+    // thread (DrawPreview included) and published every 500 ms as ms per processed frame, so
+    // the stage numbers add up to ProcessMsAvg and the top cost is readable straight off the
+    // status line. See docs/perf_measurement.md for the A/B matrix that consumes them.
+    private double _scrfdAcc, _trackAcc, _landmarkAcc, _pnpAcc, _fsaAcc, _previewAcc, _procAcc;
+    private int _stageFrames;
+    private readonly Stopwatch _stageWin = new();
+
     /// <summary>Final output pose (remapped + filtered), at the legacy 250 Hz when freetrack is active.</summary>
     public event Action<Pose6D>? OutputPose;
 
@@ -69,6 +78,23 @@ public sealed class TrackingPipeline : IDisposable
     public double CaptureFps => (_source as CameraCapture)?.CaptureFps ?? -1;
     public double ReadMs => (_source as CameraCapture)?.ReadMs ?? -1;
     public double ProcessMs { get; private set; }
+
+    /// <summary>[DIAG] Per-stage ms per processed frame over the last 500 ms window; -1 before
+    /// the first window completes. scrfd is amortized (it runs every detect_duration frames),
+    /// preview reads ~0 while <see cref="PreviewEnabled"/> is off, which is how the gating is
+    /// verified without a profiler.</summary>
+    public double ScrfdMsPerFrame { get; private set; } = -1;
+    public double TrackMsPerFrame { get; private set; } = -1;
+    public double LandmarkMsPerFrame { get; private set; } = -1;
+    public double PnpMsPerFrame { get; private set; } = -1;
+    public double FsaMsPerFrame { get; private set; } = -1;
+    public double PreviewMsPerFrame { get; private set; } = -1;
+    public double ProcessMsAvg { get; private set; } = -1;
+
+    /// <summary>[DIAG] Output-loop iterations per second vs scheduled 250 Hz ticks per second.
+    /// The gap is what the Sleep(1) poll costs: wakes far above 250 means the loop spins.</summary>
+    public double OutputWakesPerSec { get; private set; } = -1;
+    public double OutputPublishPerSec { get; private set; } = -1;
     public PoseRemapper Remapper => _remapper;
     public bool FaceTracked => !_firstSolvePose && _lastRoi.Width * _lastRoi.Height >= MinRoiArea;
 
@@ -125,6 +151,7 @@ public sealed class TrackingPipeline : IDisposable
         }
         _running = true;
         _clock.Restart();
+        _stageWin.Restart();
         // AboveNormal keeps the tracking + publish threads scheduled when a CPU-heavy game
         // (e.g. MSFS) saturates the cores, which is exactly when smooth tracking matters most.
         _processThread = new Thread(ProcessLoop)
@@ -215,6 +242,22 @@ public sealed class TrackingPipeline : IDisposable
             finally
             {
                 ProcessMs = (Stopwatch.GetTimestamp() - procStart) * 1000.0 / Stopwatch.Frequency;
+                _procAcc += ProcessMs;
+                _stageFrames++;
+                if (_stageWin.ElapsedMilliseconds >= 500)
+                {
+                    double n = Math.Max(1, _stageFrames);
+                    ScrfdMsPerFrame = _scrfdAcc / n;
+                    TrackMsPerFrame = _trackAcc / n;
+                    LandmarkMsPerFrame = _landmarkAcc / n;
+                    PnpMsPerFrame = _pnpAcc / n;
+                    FsaMsPerFrame = _fsaAcc / n;
+                    PreviewMsPerFrame = _previewAcc / n;
+                    ProcessMsAvg = _procAcc / n;
+                    _scrfdAcc = _trackAcc = _landmarkAcc = _pnpAcc = _fsaAcc = _previewAcc = _procAcc = 0;
+                    _stageFrames = 0;
+                    _stageWin.Restart();
+                }
                 frame.Dispose();
             }
         }
@@ -231,7 +274,7 @@ public sealed class TrackingPipeline : IDisposable
             // Re-acquisition: drop the PnP temporal guess so a stale pose cannot drag the
             // fresh solve toward the previous (possibly far-off) head position.
             _pnp.Reset();
-            var det = SelectBest(_scrfd.Detect(frame), default);
+            var det = SelectBest(DetectTimed(frame), default);
             if (!det.Found)
             {
                 DrawPreview(frame, null, null);
@@ -248,14 +291,14 @@ public sealed class TrackingPipeline : IDisposable
             if (_frameCount % duration == 0)
             {
                 var search = CropRoi(_lastRoi, frame, 0.4);
-                var det = SelectBest(_scrfd.Detect(frame, ToRect(search)), _lastRoi);
+                var det = SelectBest(DetectTimed(frame, ToRect(search)), _lastRoi);
                 if (!det.Found)
                 {
                     // Nothing near the tracked ROI: the tracker has drifted onto the
                     // background (fast head turns, e.g. alt-tabbing). Legacy widens the
                     // search to the whole frame here; without this the drift is permanent
                     // because CSRT keeps reporting success on background texture.
-                    det = SelectBest(_scrfd.Detect(frame), _lastRoi);
+                    det = SelectBest(DetectTimed(frame), _lastRoi);
                 }
                 if (det.Found)
                 {
@@ -265,7 +308,9 @@ public sealed class TrackingPipeline : IDisposable
             }
 
             var roiInt = ToRect(_lastRoi);
+            var swTrack = Stopwatch.StartNew();
             bool ok = _tracker.Update(frame, ref roiInt);
+            _trackAcc += swTrack.Elapsed.TotalMilliseconds;
             var roi = new Rect2d(roiInt.X, roiInt.Y, roiInt.Width, roiInt.Height);
 
             if (ok && dt > 0)
@@ -280,7 +325,7 @@ public sealed class TrackingPipeline : IDisposable
 
             if (!ok)
             {
-                var det = SelectBest(_scrfd.Detect(frame), default);
+                var det = SelectBest(DetectTimed(frame), default);
                 if (det.Found)
                 {
                     roi = det.Box;
@@ -310,7 +355,9 @@ public sealed class TrackingPipeline : IDisposable
         _lmRoi = _lmRoiInited ? MixtureRoi(_lmRoi, lmRoi, _settings.RoiFilterRate) : lmRoi;
         _lmRoiInited = true;
 
+        var swLm = Stopwatch.StartNew();
         var lm = _landmark.Detect(frame, ToRect(_lmRoi));
+        _landmarkAcc += swLm.Elapsed.TotalMilliseconds;
         if (lm == null)
         {
             DrawPreview(frame, _lastRoi, null);
@@ -335,7 +382,9 @@ public sealed class TrackingPipeline : IDisposable
             _lowConfFrames = 0;
         }
 
+        var swPnp = Stopwatch.StartNew();
         var pnp = _pnp.Solve(lm.Points2D, lm.ModelPoints3D);
+        _pnpAcc += swPnp.Elapsed.TotalMilliseconds;
         DrawPreview(frame, _lastRoi, lm.Points2D);
         if (!pnp.Success)
         {
@@ -388,8 +437,22 @@ public sealed class TrackingPipeline : IDisposable
         }
     }
 
-    /// <summary>Legacy FSA branch: rotation from FSA-Net ypr corrected by the ROI off-axis angle.</summary>
+    /// <summary>Legacy FSA branch: rotation from FSA-Net ypr corrected by the ROI off-axis angle.
+    /// Bills its wall time to the fsa stage accumulator, including the too-small-ROI bail.</summary>
     private bool RunFsa(Mat frame, out QuatD q)
+    {
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            return RunFsaCore(frame, out q);
+        }
+        finally
+        {
+            _fsaAcc += sw.Elapsed.TotalMilliseconds;
+        }
+    }
+
+    private bool RunFsaCore(Mat frame, out QuatD q)
     {
         q = default;
         var rect = ToRect(_lmRoi);
@@ -473,8 +536,20 @@ public sealed class TrackingPipeline : IDisposable
     {
         long last = _clock.ElapsedTicks;
         double nextMs = OutputPeriodMs;
+        long wakes = 0, ticks = 0;
+        var win = Stopwatch.StartNew();
         while (_running)
         {
+            wakes++;
+            if (win.ElapsedMilliseconds >= 500)
+            {
+                OutputWakesPerSec = wakes * 1000.0 / win.ElapsedMilliseconds;
+                OutputPublishPerSec = ticks * 1000.0 / win.ElapsedMilliseconds;
+                wakes = 0;
+                ticks = 0;
+                win.Restart();
+            }
+
             double nowMs = _clock.ElapsedTicks * 1000.0 / Stopwatch.Frequency;
             if (nowMs < nextMs)
             {
@@ -482,6 +557,7 @@ public sealed class TrackingPipeline : IDisposable
                 continue;
             }
             nextMs += OutputPeriodMs;
+            ticks++;
             if (nowMs - nextMs > 50)
             {
                 nextMs = nowMs + OutputPeriodMs; // fell behind; resync
@@ -503,6 +579,23 @@ public sealed class TrackingPipeline : IDisposable
                 Interlocked.Increment(ref _errorCount);
             }
         }
+    }
+
+    /// <summary>[DIAG] SCRFD wrappers that bill detect time to the scrfd stage accumulator.</summary>
+    private List<FaceDetection> DetectTimed(Mat frame)
+    {
+        var sw = Stopwatch.StartNew();
+        var dets = _scrfd.Detect(frame);
+        _scrfdAcc += sw.Elapsed.TotalMilliseconds;
+        return dets;
+    }
+
+    private List<FaceDetection> DetectTimed(Mat frame, Rect roi)
+    {
+        var sw = Stopwatch.StartNew();
+        var dets = _scrfd.Detect(frame, roi);
+        _scrfdAcc += sw.Elapsed.TotalMilliseconds;
+        return dets;
     }
 
     /// <summary>Legacy box selection: largest area, preferring overlap with the predicted ROI.</summary>
@@ -594,6 +687,8 @@ public sealed class TrackingPipeline : IDisposable
             return;
         }
 
+        var sw = Stopwatch.StartNew();
+
         // Ownership of this Mat transfers to _preview; it is disposed by the
         // next DrawPreview call or by Dispose(), always under _previewGate.
         var show = frame.Clone();
@@ -613,7 +708,22 @@ public sealed class TrackingPipeline : IDisposable
             _preview?.Dispose();
             _preview = show;
         }
+        _previewAcc += sw.Elapsed.TotalMilliseconds;
     }
+
+    /// <summary>Stable one-line perf snapshot; the keys are a contract consumed by
+    /// docs/perf_measurement.md and by the periodic crash.log perf note. Invariant culture so
+    /// the line parses identically on any UI language.</summary>
+    public static string FormatPerfLine(double scrfd, double track, double landmark, double pnp, double fsa,
+        double preview, double proc, double wakesPerSec, double publishPerSec, double capFps, double readMs)
+        => string.Format(CultureInfo.InvariantCulture,
+            "scrfd={0:F2} track={1:F2} lm={2:F2} pnp={3:F2} fsa={4:F2} preview={5:F2} proc={6:F2} " +
+            "out_wakes={7:F0}/s out_pub={8:F0}/s cap={9:F1}fps read={10:F1}ms",
+            scrfd, track, landmark, pnp, fsa, preview, proc, wakesPerSec, publishPerSec, capFps, readMs);
+
+    public string PerfSnapshot() => FormatPerfLine(ScrfdMsPerFrame, TrackMsPerFrame, LandmarkMsPerFrame,
+        PnpMsPerFrame, FsaMsPerFrame, PreviewMsPerFrame, ProcessMsAvg,
+        OutputWakesPerSec, OutputPublishPerSec, CaptureFps, ReadMs);
 
     public void Dispose()
     {

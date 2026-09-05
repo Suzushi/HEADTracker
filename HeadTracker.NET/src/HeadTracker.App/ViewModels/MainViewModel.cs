@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
@@ -21,6 +22,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly Action _openSettings;
     private readonly Action _exitApplication;
     private bool _previewVisible = true;
+
+    // [DIAG] EMA of what one preview refresh costs the UI thread (clone + pixel copy +
+    // BitmapSource create), and a 10 s cadence counter for the crash.log perf note.
+    private double _previewPubMs;
+    private int _perfNoteTicks;
 
     public MainViewModel(TrackerService service, Action openSettings, Action exitApplication)
     {
@@ -210,7 +216,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Exit() => _exitApplication();
 
-    private void OnUiTick(object? sender, EventArgs e) => RefreshStatus();
+    private void OnUiTick(object? sender, EventArgs e)
+    {
+        RefreshStatus();
+
+        // [DIAG] periodic perf line in crash.log so the A/B matrix in docs/perf_measurement.md
+        // can be read off the log instead of attaching a profiler. 50 ms timer -> 200 ticks = 10 s.
+        if (++_perfNoteTicks >= 200)
+        {
+            _perfNoteTicks = 0;
+            if (_service.IsRunning)
+            {
+                App.LogNote($"perf {_service.PerfSnapshot()} prevpub={_previewPubMs:F2}ms");
+            }
+        }
+    }
 
     /// <summary>Called by the window on visibility/state changes. Stops preview rendering here and
     /// tells the pipeline to skip DrawPreview while the window is hidden (to tray) or minimized.</summary>
@@ -230,7 +250,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (IsRunning)
         {
             var (output, rawYpr, rawT) = _service.LatestPoses();
-            PerfText = $"[DIAG cap {_service.CaptureFps:F1} read {_service.ReadMs:F0}ms proc {_service.Fps:F1} pms {_service.ProcessMs:F0} res {_service.Resolution} via {_service.CaptureCombo}]  " +
+            PerfText = $"[DIAG cap {_service.CaptureFps:F1} read {_service.ReadMs:F0}ms proc {_service.Fps:F1} pms {_service.ProcessMs:F0} res {_service.Resolution} via {_service.CaptureCombo} | {_service.PerfStages}]  " +
                        string.Format(Loc.Tr("perf_format"),
                        _service.Fps.ToString("F1"),
                        Loc.Tr(_service.FaceTracked ? "yes" : "no"),
@@ -243,6 +263,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (_previewVisible)
             {
+                var swPrev = Stopwatch.StartNew();
                 using var frame = _service.GetPreview();
                 if (frame != null)
                 {
@@ -255,6 +276,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     bmp.Freeze();
                     Preview = bmp;
                 }
+                double ms = swPrev.Elapsed.TotalMilliseconds;
+                _previewPubMs = _previewPubMs == 0 ? ms : _previewPubMs * 0.8 + ms * 0.2;
             }
         }
         else
