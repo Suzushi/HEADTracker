@@ -41,9 +41,15 @@ internal sealed class GlobalHotkey : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool PostThreadMessage(int idThread, uint msg, IntPtr wParam, IntPtr lParam);
 
+    // PostThreadMessage wants a Win32 thread id, which is a different number space from
+    // Thread.ManagedThreadId; posting the managed id silently goes nowhere (see Shutdown).
+    [DllImport("kernel32.dll")]
+    private static extern int GetCurrentThreadId();
+
     private readonly Action _onHotkey;
     private readonly object _gate = new();
     private Thread? _thread;
+    private int _win32ThreadId;
     private bool _registered;
     private int _lastError;
 
@@ -114,34 +120,54 @@ internal sealed class GlobalHotkey : IDisposable
 
     private void Loop(uint mods, uint vk, ManualResetEventSlim ready)
     {
-        // hWnd = NULL binds the hotkey to this thread's queue rather than to any window, so it
-        // survives the main window being hidden to the tray or destroyed and re-created.
-        bool ok = RegisterHotKey(IntPtr.Zero, HotkeyId, mods, vk);
+        // Stamp the Win32 thread id first thing: Shutdown needs it to post WM_QUIT here, and
+        // the ManagedThreadId the Thread object exposes is not a substitute for it.
         lock (_gate)
         {
-            _registered = ok;
-            _lastError = ok ? 0 : Marshal.GetLastWin32Error();
+            _win32ThreadId = GetCurrentThreadId();
         }
-        ready.Set();
-        if (!ok)
+        try
         {
-            return;
-        }
-
-        // GetMessage returns 0 on WM_QUIT and -1 on error; either ends the loop.
-        while (GetMessage(out MSG msg, IntPtr.Zero, 0, 0) > 0)
-        {
-            if (msg.message == WmHotkey && msg.wParam.ToInt32() == HotkeyId)
+            // hWnd = NULL binds the hotkey to this thread's queue rather than to any window, so
+            // it survives the main window being hidden to the tray or destroyed and re-created.
+            bool ok = RegisterHotKey(IntPtr.Zero, HotkeyId, mods, vk);
+            lock (_gate)
             {
-                _onHotkey();
+                _registered = ok;
+                _lastError = ok ? 0 : Marshal.GetLastWin32Error();
+            }
+            ready.Set();
+            if (!ok)
+            {
+                return;
+            }
+
+            // GetMessage returns 0 on WM_QUIT and -1 on error; either ends the loop.
+            while (GetMessage(out MSG msg, IntPtr.Zero, 0, 0) > 0)
+            {
+                if (msg.message == WmHotkey && msg.wParam.ToInt32() == HotkeyId)
+                {
+                    _onHotkey();
+                }
+            }
+
+            // The thread that registered must be the one that unregisters.
+            UnregisterHotKey(IntPtr.Zero, HotkeyId);
+            lock (_gate)
+            {
+                _registered = false;
             }
         }
-
-        // The thread that registered must be the one that unregisters.
-        UnregisterHotKey(IntPtr.Zero, HotkeyId);
-        lock (_gate)
+        finally
         {
-            _registered = false;
+            // Only clear our own id: a replacement worker may already have stamped its own.
+            lock (_gate)
+            {
+                if (_win32ThreadId == GetCurrentThreadId())
+                {
+                    _win32ThreadId = 0;
+                }
+            }
         }
     }
 
@@ -158,9 +184,30 @@ internal sealed class GlobalHotkey : IDisposable
             return;
         }
 
+        int win32Id;
+        lock (_gate)
+        {
+            win32Id = _win32ThreadId;
+        }
+        // The worker stamps its id before registering and Rebind waits for the registration
+        // attempt, so the id is normally already here. If that wait timed out, give the id a
+        // moment to appear instead of posting WM_QUIT to thread 0: a quit that goes nowhere
+        // leaves the worker pumping forever, still holding the old registration, so every
+        // later bind of the same combination fails with 1409 while the orphan answers the key.
+        for (int i = 0; win32Id == 0 && i < 50 && !thread.Join(10); i++)
+        {
+            lock (_gate)
+            {
+                win32Id = _win32ThreadId;
+            }
+        }
+
         // Fails harmlessly if the worker already exited (a rejected registration never pumps, so
         // it has no message queue); Join is what actually guarantees the thread is gone.
-        PostThreadMessage(thread.ManagedThreadId, WmQuit, IntPtr.Zero, IntPtr.Zero);
+        if (win32Id != 0)
+        {
+            PostThreadMessage(win32Id, WmQuit, IntPtr.Zero, IntPtr.Zero);
+        }
         thread.Join(1000);
     }
 
