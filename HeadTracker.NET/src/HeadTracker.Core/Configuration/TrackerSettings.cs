@@ -123,6 +123,9 @@ public sealed class TrackerSettings
     public double CalibrationRms { get; set; }
 
     /// <summary>True once a plausible custom calibration has been written by the wizard.</summary>
+    /// <remarks>Derived, so not persisted. Without <see cref="YamlIgnoreAttribute"/> the serializer
+    /// emits it under the CLR name, dropping a PascalCase key into an otherwise snake_case file.</remarks>
+    [YamlIgnore]
     public bool HasCustomCalibration =>
         CameraFx > 1 && CameraFy > 1 && CalibratedWidth > 0 && CalibratedHeight > 0;
 
