@@ -39,10 +39,12 @@ same `config.yaml`.
 
 ## Download & run
 
-Grab the latest self-contained build (`HeadTracker-win-x64`) from the
-[CI artifacts](https://github.com/Suzushi/HEADTracker/actions/workflows/ci.yml) or
-[Releases](https://github.com/Suzushi/HEADTracker/releases) once published, unzip, and run
-`HeadTracker.exe`. The self-contained publish includes the .NET runtime, so no install is needed.
+Grab `HeadTracker-<version>-win-x64.zip` from
+[Releases](https://github.com/Suzushi/HEADTracker/releases), unzip it anywhere, and run
+`HeadTracker.exe`. The build is self-contained — the .NET runtime is inside — so there is nothing
+to install, and deleting the folder is a complete uninstall. Each zip comes with a `.sha256`.
+
+The binary is **not code-signed**, so SmartScreen warns once: **More info → Run anyway**.
 
 There is **no UAC prompt**: the app runs unelevated. The one exception to be aware of — if your sim
 itself runs as administrator, start HeadTracker as administrator too, because Windows (UIPI) blocks
@@ -125,11 +127,21 @@ The original C++/Qt FOXTracker implementation is **not part of this repository**
 superseded by the C#/.NET rewrite in `HeadTracker.NET/`, which is the only active code path here. To
 browse the legacy C++ sources, see the upstream [@xuhao1/FOXTracker](https://github.com/xuhao1/FOXTracker).
 
-## CI
+## CI & releases
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push/PR to
 `main` on a **windows-latest** runner: restore → build → test → self-contained publish, uploading
 the test results and the `HeadTracker-win-x64` artifact.
+
+Pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml): it re-runs
+the tests, publishes self-contained, zips the result and opens a GitHub Release carrying the zip and
+its SHA256. The tag *is* the version — it is handed to the build as `-p:Version=`, so an exe's
+`FileVersion` can never disagree with the release it shipped in.
+
+```powershell
+git tag v0.2.0
+git push origin v0.2.0
+```
 
 ## License
 
@@ -164,6 +176,10 @@ C++/Qt 版 FOXTracker（作者 [@xuhao1](https://github.com/xuhao1/FOXTracker)�
 完全重写**，协议与 `config.yaml` 与旧版保持兼容。
 
 - **环境**：Windows 10/11 x64 + 一个普通摄像头（手机当摄像头如 Iriun 亦可）。
+- **下载**：从 [Releases](https://github.com/Suzushi/HEADTracker/releases) 取
+  `HeadTracker-<版本>-win-x64.zip`，解压即用——已自包含 .NET 运行时，无需安装，删目录即卸载，
+  附 SHA256 校验文件。程序未签名，SmartScreen 首次运行会提示，选「更多信息 → 仍要运行」。
+  **不弹 UAC**（除非你的模拟器本身以管理员运行，此时本程序也需提权，见上文 UIPI 说明）。
 - **构建**：安装 .NET 8 SDK 后 `cd HeadTracker.NET; dotnet build HeadTracker.sln -c Release`。
 - **接入 DCS**：设置 → 输出 里勾选 *FreeTrack 共享内存*；DCS 里 *头部跟踪* 选 *TrackIR*。
 - **热键**：F9 启停，C 回中（窗口内），**Ctrl+X 全局回中（游戏内有效，可在设置里改）**。

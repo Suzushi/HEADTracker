@@ -26,6 +26,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <AssemblyName>HeadTracker</AssemblyName>
+    <!-- The authoritative version is the git tag: release.yml passes -p:Version=<tag minus the
+         leading v>, and a global property beats anything set here. This prefix only shapes local
+         builds, so that a dev exe reports something more useful than the SDK default 1.0.0 when a
+         user pastes a crash.log — ProductVersion also carries the commit sha. Keep it equal to the
+         last tag you cut. -->
+    <VersionPrefix>0.2.0</VersionPrefix>
     <ApplicationIcon>..\..\..\icon.ico</ApplicationIcon>
     <!-- No <ApplicationManifest> on purpose: the app runs at whatever integrity level its caller
          has. It was briefly elevated to fix an in-game re-center hotkey that turned out to be a

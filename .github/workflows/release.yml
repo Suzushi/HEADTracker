@@ -1,0 +1,127 @@
+name: Release
+
+# Tag-driven: pushing v* is the only thing that publishes. The tag name is the single source of
+# truth for the version, so the exe's FileVersion can never drift from the release it belongs to.
+on:
+  push:
+    tags: [ 'v*' ]
+
+# softprops/action-gh-release creates the release and uploads assets through the default
+# GITHUB_TOKEN, which needs contents: write. Scoped to this workflow only.
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  # A half-uploaded release is worse than a queued one: never cancel mid-upload.
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  SOLUTION: HeadTracker.NET/HeadTracker.sln
+  APP: HeadTracker.NET/src/HeadTracker.App/HeadTracker.App.csproj
+
+jobs:
+  release:
+    # WPF/Win32 cannot be built on a Linux runner, same constraint as ci.yml.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Derive version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $version = if ($tag.StartsWith('v')) { $tag.Substring(1) } else { $tag }
+          if ($version -notmatch '^\d+\.\d+\.\d+') {
+            throw "Tag '$tag' does not look like a version; expected vMAJOR.MINOR.PATCH."
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
+          Write-Host "Releasing version $version"
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Build (Release)
+        run: dotnet build ${{ env.SOLUTION }} -c Release --no-restore
+
+      # Gate the release on the tests: a tag is a promise to users, not just a label.
+      - name: Test
+        run: dotnet test ${{ env.SOLUTION }} -c Release --no-build
+
+      # Self-contained, not framework-dependent: the audience installs neither the .NET Desktop
+      # Runtime nor anything else, and config.yaml has to stay an editable file next to the exe
+      # (which rules out PublishSingleFile -- Content would be baked into the bundle).
+      - name: Publish (win-x64, self-contained)
+        run: dotnet publish ${{ env.APP }} -c Release -r win-x64 --self-contained true -p:Version=${{ steps.ver.outputs.version }} -o ${{ github.workspace }}/publish
+
+      - name: Package zip and checksum
+        id: pkg
+        shell: pwsh
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          $name = "HeadTracker-$v-win-x64"
+          $zip = Join-Path $env:GITHUB_WORKSPACE "$name.zip"
+          Compress-Archive -Path (Join-Path $env:GITHUB_WORKSPACE 'publish/*') `
+                           -DestinationPath $zip -CompressionLevel Optimal
+          $sha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          # "<hash>  <file>" so certutil and sha256sum -c both accept it.
+          Set-Content -Path "$zip.sha256" -Value "$sha  $name.zip" -Encoding ascii -NoNewline
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "zip=$zip"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "sha256=$sha"
+          Write-Host "$name.zip  SHA256=$sha"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: HeadTracker ${{ steps.ver.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.pkg.outputs.zip }}
+            ${{ steps.pkg.outputs.zip }}.sha256
+          body: |
+            自包含绿色版：解压后直接运行 `HeadTracker.exe`。**不需要安装 .NET 运行时**，不写注册表，
+            删除目录即卸载。
+
+            Self-contained portable build: unzip and run `HeadTracker.exe`. **No .NET Desktop
+            Runtime required**, nothing is written to the registry, deleting the folder uninstalls it.
+
+            ### 首次运行 / First run
+
+            本程序未做代码签名，SmartScreen 会提示一次：选「更多信息 → 仍要运行」。
+
+            The binary is unsigned, so SmartScreen warns once: **More info → Run anyway**.
+
+            ### 校验 / Verify
+
+            ```
+            SHA256: ${{ steps.pkg.outputs.sha256 }}
+            ```
+
+            随附 `.sha256` 文件；Windows 下可用 `certutil -hashfile <zip> SHA256` 核对。
+
+            ### 配置 / Configuration
+
+            `config.yaml` 与 `HeadTracker.exe` 同目录，可直接编辑；界面里改不动的项都在里面。
+            参数说明见 [tuning guide](https://github.com/Suzushi/HEADTracker/blob/main/docs/tuning_guide.md)。
+
+            `config.yaml` sits next to the exe and is meant to be edited.
+
+            ### 注意 / Note
+
+            若你的模拟器本身以管理员身份运行，请以管理员身份启动 HeadTracker：Windows UIPI 会丢弃
+            发往完整性级别低于前台窗口进程的全局热键，游戏内的回中热键（默认 `Ctrl+X`）会失效。
+
+            If your sim runs elevated, run HeadTracker elevated too — UIPI drops global hotkeys
+            sent to a process below the foreground window's integrity level, and the in-game
+            re-center hotkey (`Ctrl+X` by default) would stop working.
