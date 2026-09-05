@@ -83,11 +83,11 @@ jobs:
           try {
             $names = $archive.Entries.FullName | ForEach-Object { $_ -replace '\\', '/' }
             # Exactly what TrackingPipeline opens at startup. The five landmark tiers map to
-            # landmark_detect_method 0..4 in order (U, V, 1, 2, 3 -- the file names are legacy and
-            # deliberately do not match the level numbers, and lm_model0/T_opt.onnx in assets/ are
-            # loaded by nothing), and config.yaml ships level 1, so lm_modelV_opt.onnx is the one a
-            # fresh install reads. All five are required because the tier is a Settings dropdown: a
-            # missing file would only fail once the user moves it, long after the release shipped.
+            # landmark_detect_method 0..4 in order (U, V, 1, 2, 3 -- the file names are legacy
+            # and deliberately do not match the level numbers), and config.yaml ships level 1,
+            # so lm_modelV_opt.onnx is the one a fresh install reads. All five are required
+            # because the tier is a Settings dropdown: a missing file would only fail once the
+            # user moves it, long after the release shipped.
             $lm = 'lm_modelU_opt.onnx', 'lm_modelV_opt.onnx', 'lm_model1_opt.onnx',
                   'lm_model2_opt.onnx', 'lm_model3_opt.onnx'
             $required = @('HeadTracker.exe', 'config.yaml',
