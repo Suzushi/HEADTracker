@@ -92,10 +92,12 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_inp_bound_m">Input bound (m)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_out_bound_m">Output bound (m)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_expo_m">Expo (0..1)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_invert_m">Invert direction</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_inp_bound_deg">Input bound (deg)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_out_bound_deg">Output bound (deg)</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_expo_deg">Expo (0..1)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_note">Rotation rows are Yaw / Pitch / Roll. Head movement beyond the input bound saturates at the output bound.</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_invert_deg">Invert direction</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_note">Rotation rows are Yaw / Pitch / Roll. Head movement beyond the input bound saturates at the output bound. Ticking "Invert direction" flips the direction this axis is sent to the game; if an axis moves the wrong way in-game, tick it.</system:String>
 
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_use">Use Accela filter</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_double">Double filter pass</system:String>

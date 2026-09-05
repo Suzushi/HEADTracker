@@ -288,6 +288,30 @@ public sealed class TrackerSettings
     [YamlMember(Alias = "expo_eul_yaw")]
     public double ExpoEulYaw { get; set; } = 0.0;
 
+    // --- Per-axis direction inversion -------------------------------------------
+    // Flips the sign of a mapped output axis inside PoseRemapper (after curves/expo, before
+    // Accela), on the SAME value the main window shows and the senders publish -- so ticking
+    // a box is immediately visible on the x/y/z readout and takes effect in-game at once.
+    // For setups whose head/camera orientation makes an axis move opposite to expectation.
+    // Off by default: the legacy output is unchanged.
+    [YamlMember(Alias = "invert_trans_x")]
+    public bool InvertTransX { get; set; } = false;
+
+    [YamlMember(Alias = "invert_trans_y")]
+    public bool InvertTransY { get; set; } = false;
+
+    [YamlMember(Alias = "invert_trans_z")]
+    public bool InvertTransZ { get; set; } = false;
+
+    [YamlMember(Alias = "invert_eul_yaw")]
+    public bool InvertEulYaw { get; set; } = false;
+
+    [YamlMember(Alias = "invert_eul_pitch")]
+    public bool InvertEulPitch { get; set; } = false;
+
+    [YamlMember(Alias = "invert_eul_roll")]
+    public bool InvertEulRoll { get; set; } = false;
+
     // --- Optional response curves (replace expo when non-empty) -----------------
     // Serialized as "-1,-1;x,y;...;1,1" (see ResponseCurve). Empty = fall back to expo.
     [YamlMember(Alias = "curve_trans_x")]

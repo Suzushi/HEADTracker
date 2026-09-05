@@ -203,6 +203,47 @@ public class PoseRemapperTests
     }
 
     [Fact]
+    public void InvertTransX_FlipsFreetrackOutput_SeenByUiAndGame()
+    {
+        // The flip lives on the remapper OUTPUT -- the same value the main-window x/y/z
+        // readout and Publish()->senders consume -- so a ticked box must show up here.
+        // Regression guard: it used to live inside a sender, leaving this (and the UI)
+        // un-flipped, which is why the checkbox looked dead.
+        var settings = new TrackerSettings { UseFt = true, InvertTransX = true };
+        var remapper = new PoseRemapper(settings);
+        remapper.OnPose(Mat3.Identity, Vec3.Zero);
+        remapper.OnPose(Mat3.Identity, new Vec3(settings.InpBoundX, 0, 0));
+        var pose = remapper.Tick(0.004)!.Value;
+        Assert.Equal(-settings.OutBoundX, pose.Tx, 6); // mapped to +OutBoundX, then flipped
+    }
+
+    [Fact]
+    public void InvertEulYaw_FlipsYawOutput()
+    {
+        var settings = new TrackerSettings { UseFt = true, InvertEulYaw = true };
+        var remapper = new PoseRemapper(settings);
+        var rz90 = new Mat3(0, -1, 0, 1, 0, 0, 0, 0, 1);
+        remapper.OnPose(Mat3.Identity, Vec3.Zero);
+        remapper.OnPose(rz90, Vec3.Zero);
+        var pose = remapper.Tick(0.004)!.Value;
+        Assert.Equal(-settings.OutBoundYaw, pose.Yaw, 6); // clamped to +bound, then flipped
+    }
+
+    [Fact]
+    public void InvertTransY_FlipsUdpPathOutput_SeenByUiAndGame()
+    {
+        var settings = new TrackerSettings { InvertTransY = true }; // UseFt off: UDP-only path
+        var remapper = new PoseRemapper(settings);
+        Assert.False(remapper.UseAccelaPath);
+        remapper.OnPose(Mat3.Identity, new Vec3(0.1, 0.2, 0.3)); // center
+        remapper.OnPose(Mat3.Identity, new Vec3(0.1, 0.3, 0.3)); // +0.1 m in Y
+        var pose = remapper.SnapshotUnfiltered()!.Value;
+        Assert.Equal(0, pose.Tx, 6);
+        Assert.Equal(-0.1, pose.Ty, 6); // flipped by InvertTransY
+        Assert.Equal(0, pose.Tz, 6);
+    }
+
+    [Fact]
     public void ResetCenter_NextPoseBecomesNewCenter()
     {
         var remapper = new PoseRemapper(new TrackerSettings());

@@ -92,10 +92,12 @@
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_inp_bound_m">输入界（米）</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_out_bound_m">输出界（米）</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_expo_m">指数曲线 (0..1)</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_invert_m">反转方向</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_inp_bound_deg">输入界（度）</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_out_bound_deg">输出界（度）</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_expo_deg">指数曲线 (0..1)</system:String>
-    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_note">旋转三行依次为 偏航/俯仰/滚转。头部运动超过输入界后，输出在输出界处饱和。</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_invert_deg">反转方向</system:String>
+    <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="map_note">旋转三行依次为 偏航/俯仰/滚转。头部运动超过输入界后，输出在输出界处饱和。勾选“反转方向”后，该轴送入游戏的方向取反；若某轴在游戏里方向相反，勾它即可。</system:String>
 
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_use">使用 Accela 滤波</system:String>
     <system:String xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="sm_double">双重滤波</system:String>

@@ -68,6 +68,12 @@ out_bound_yaw: 120
 expo_eul_roll: 0
 expo_eul_pitch: 0
 expo_eul_yaw: 0
+invert_trans_x: false
+invert_trans_y: false
+invert_trans_z: false
+invert_eul_yaw: false
+invert_eul_pitch: false
+invert_eul_roll: false
 curve_trans_x: ''
 curve_trans_y: ''
 curve_trans_z: ''

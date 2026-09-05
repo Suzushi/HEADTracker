@@ -215,9 +215,11 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
@@ -240,31 +242,41 @@
                         <TextBox Grid.Row="3" Grid.Column="2" Margin="2,3" Text="{Binding ExpoTransY}" />
                         <TextBox Grid.Row="3" Grid.Column="3" Margin="2,3" Text="{Binding ExpoTransZ}" />
 
-                        <Separator Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,6" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_invert_m}" />
+                        <CheckBox Grid.Row="4" Grid.Column="1" Margin="2,5" HorizontalAlignment="Center" IsChecked="{Binding InvertTransX}" />
+                        <CheckBox Grid.Row="4" Grid.Column="2" Margin="2,5" HorizontalAlignment="Center" IsChecked="{Binding InvertTransY}" />
+                        <CheckBox Grid.Row="4" Grid.Column="3" Margin="2,5" HorizontalAlignment="Center" IsChecked="{Binding InvertTransZ}" />
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_inp_bound_deg}" />
-                        <TextBox Grid.Row="5" Grid.Column="1" Margin="2,3" Text="{Binding InpBoundYaw}" />
-                        <TextBox Grid.Row="5" Grid.Column="2" Margin="2,3" Text="{Binding InpBoundPitch}" />
-                        <TextBox Grid.Row="5" Grid.Column="3" Margin="2,3" Text="{Binding InpBoundRoll}" />
+                        <Separator Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,6" />
 
-                        <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_out_bound_deg}" />
-                        <TextBox Grid.Row="6" Grid.Column="1" Margin="2,3" Text="{Binding OutBoundYaw}" />
-                        <TextBox Grid.Row="6" Grid.Column="2" Margin="2,3" Text="{Binding OutBoundPitch}" />
-                        <TextBox Grid.Row="6" Grid.Column="3" Margin="2,3" Text="{Binding OutBoundRoll}" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_inp_bound_deg}" />
+                        <TextBox Grid.Row="6" Grid.Column="1" Margin="2,3" Text="{Binding InpBoundYaw}" />
+                        <TextBox Grid.Row="6" Grid.Column="2" Margin="2,3" Text="{Binding InpBoundPitch}" />
+                        <TextBox Grid.Row="6" Grid.Column="3" Margin="2,3" Text="{Binding InpBoundRoll}" />
 
-                        <TextBlock Grid.Row="7" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_expo_deg}" />
-                        <TextBox Grid.Row="7" Grid.Column="1" Margin="2,3" Text="{Binding ExpoEulYaw}" />
-                        <TextBox Grid.Row="7" Grid.Column="2" Margin="2,3" Text="{Binding ExpoEulPitch}" />
-                        <TextBox Grid.Row="7" Grid.Column="3" Margin="2,3" Text="{Binding ExpoEulRoll}" />
+                        <TextBlock Grid.Row="7" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_out_bound_deg}" />
+                        <TextBox Grid.Row="7" Grid.Column="1" Margin="2,3" Text="{Binding OutBoundYaw}" />
+                        <TextBox Grid.Row="7" Grid.Column="2" Margin="2,3" Text="{Binding OutBoundPitch}" />
+                        <TextBox Grid.Row="7" Grid.Column="3" Margin="2,3" Text="{Binding OutBoundRoll}" />
 
-                        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Grid.Row="8" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_expo_deg}" />
+                        <TextBox Grid.Row="8" Grid.Column="1" Margin="2,3" Text="{Binding ExpoEulYaw}" />
+                        <TextBox Grid.Row="8" Grid.Column="2" Margin="2,3" Text="{Binding ExpoEulPitch}" />
+                        <TextBox Grid.Row="8" Grid.Column="3" Margin="2,3" Text="{Binding ExpoEulRoll}" />
+
+                        <TextBlock Grid.Row="9" Grid.Column="0" Style="{StaticResource Label}" Text="{DynamicResource map_invert_deg}" />
+                        <CheckBox Grid.Row="9" Grid.Column="1" Margin="2,5" HorizontalAlignment="Center" IsChecked="{Binding InvertEulYaw}" />
+                        <CheckBox Grid.Row="9" Grid.Column="2" Margin="2,5" HorizontalAlignment="Center" IsChecked="{Binding InvertEulPitch}" />
+                        <CheckBox Grid.Row="9" Grid.Column="3" Margin="2,5" HorizontalAlignment="Center" IsChecked="{Binding InvertEulRoll}" />
+
+                        <StackPanel Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Margin="0,8,0,0">
                             <Button x:Name="CurveEditorButton" Content="{DynamicResource curve_edit_btn}"
                                     Height="28" MinWidth="170" Click="OnEditCurves" />
                             <TextBlock Text="{DynamicResource curve_edit_note}" Foreground="Gray" TextWrapping="Wrap"
                                        VerticalAlignment="Center" Margin="10,0,0,0" />
                         </StackPanel>
 
-                        <TextBlock Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="4" TextWrapping="Wrap" Foreground="Gray"
+                        <TextBlock Grid.Row="11" Grid.Column="0" Grid.ColumnSpan="4" TextWrapping="Wrap" Foreground="Gray"
                                    Text="{DynamicResource map_note}" />
                     </Grid>
                 </ScrollViewer>

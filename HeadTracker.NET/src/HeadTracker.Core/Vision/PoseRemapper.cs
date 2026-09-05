@@ -118,6 +118,21 @@ public sealed class PoseRemapper
                     Remap(eul.Z, _settings.InpBoundRoll, _settings.OutBoundRoll, _settings.ExpoEulRoll, _curveEulRoll));
             }
 
+            // Per-axis direction flip on the FINAL mapped value, before Accela and before the
+            // store to _eulLast/_tLast. Both output consumers read those fields: Tick() and
+            // SnapshotUnfiltered() feed the main-window x/y/z readout AND Publish() -> senders,
+            // so flipping here makes the checkbox verifiable on the UI and correct in-game at
+            // once. Flipping inside a sender instead left the UI showing the un-flipped value,
+            // so the checkbox looked dead even though the game packet had changed.
+            tRel = new Vec3(
+                _settings.InvertTransX ? -tRel.X : tRel.X,
+                _settings.InvertTransY ? -tRel.Y : tRel.Y,
+                _settings.InvertTransZ ? -tRel.Z : tRel.Z);
+            eul = new Vec3(
+                _settings.InvertEulYaw ? -eul.X : eul.X,
+                _settings.InvertEulPitch ? -eul.Y : eul.Y,
+                _settings.InvertEulRoll ? -eul.Z : eul.Z);
+
             _eulLast = eul;
             _tLast = tRel;
         }
