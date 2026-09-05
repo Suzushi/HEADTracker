@@ -106,8 +106,8 @@ Settings → **Output** tab. Which game protocols to emit.
 
 | Key | Settings UI (EN / 中文) | Default | Description / 说明 |
 |---|---|---|---|
-| `use_ft` | FreeTrack shared memory / FreeTrack 共享内存 | `false` | Emit pose via the FreeTrack/TrackIR shared-memory protocol (`FT_SharedMem`). **DCS World uses this** (set DCS Head Tracking to *TrackIR*). / 通过 FreeTrack/TrackIR 共享内存协议（`FT_SharedMem`）发送姿态；**DCS 用这个**（DCS 里头部跟踪选 TrackIR）。 |
-| `use_npclient` | npclient (TrackIR) / npclient (TrackIR) | `false` | Emit the npclient/TrackIR `NPClient.dll` UDP protocol. / 发送 npclient/TrackIR 协议。 |
+| `use_ft` | FreeTrack shared memory / FreeTrack 共享内存 | `false` | Emit pose via the FreeTrack/TrackIR shared-memory protocol (`FT_SharedMem`). **DCS World uses this** (set DCS Head Tracking to *TrackIR*). Shipped config uses `true`. / 通过 FreeTrack/TrackIR 共享内存协议（`FT_SharedMem`）发送姿态；**DCS 用这个**（DCS 里头部跟踪选 TrackIR）。发布配置为 true。 |
+| `use_npclient` | npclient (TrackIR) / npclient (TrackIR) | `false` | Emit the npclient/TrackIR `NPClient.dll` UDP protocol. Shipped config uses `true`. / 发送 npclient/TrackIR 协议。发布配置为 true。 |
 | `send_posedata_udp` | Send UDP pose data / 发送 UDP 姿态数据 | `true` | Emit the 48-byte opentrack-compatible UDP pose stream (used when feeding opentrack). / 发送 48 字节、兼容 opentrack 的 UDP 姿态流。 |
 | `udp_host` | UDP host / UDP 主机 | `127.0.0.1` | Destination host for the UDP pose stream. / UDP 姿态流目标主机。 |
 | `port` | UDP port / UDP 端口 | `4242` | Destination port (both the 48-byte pose stream and npclient). / 目标端口（48 字节姿态流与 npclient 共用）。 |
