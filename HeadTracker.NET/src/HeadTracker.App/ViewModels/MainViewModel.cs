@@ -221,7 +221,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (IsRunning)
         {
             var (output, rawYpr, rawT) = _service.LatestPoses();
-            PerfText = string.Format(Loc.Tr("perf_format"),
+            PerfText = $"[DIAG cap {_service.CaptureFps:F1} read {_service.ReadMs:F0}ms proc {_service.Fps:F1} pms {_service.ProcessMs:F0} res {_service.Resolution}]  " +
+                       string.Format(Loc.Tr("perf_format"),
                        _service.Fps.ToString("F1"),
                        Loc.Tr(_service.FaceTracked ? "yes" : "no"),
                        _service.RmsPx.ToString("F2"),

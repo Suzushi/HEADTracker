@@ -1,5 +1,8 @@
 detect_duration: 20
 camera_id: 0
+capture_width: 640
+capture_height: 480
+capture_auto_negotiate: true
 enable_multithread_detect: true
 retrack_queue_size: 10
 fps: 60

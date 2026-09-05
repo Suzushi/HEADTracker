@@ -50,6 +50,12 @@ public sealed class TrackerService : IDisposable
     public bool FaceTracked => _pipeline?.FaceTracked ?? false;
     public double RmsPx => _pipeline?.LastReprojectionRmsPx ?? 0;
     public long Errors => _pipeline?.ErrorCount ?? 0;
+
+    // [DIAG] capture-vs-processing telemetry surfaced in the status bar.
+    public double CaptureFps => _pipeline?.CaptureFps ?? -1;
+    public double ReadMs => _pipeline?.ReadMs ?? -1;
+    public double ProcessMs => _pipeline?.ProcessMs ?? 0;
+    public string Resolution => _pipeline != null ? $"{_pipeline.FrameWidth}\u00d7{_pipeline.FrameHeight}" : "--";
     public bool IsPaused => _pipeline?.Paused ?? false;
     public string JoystickStatus => _hotkeys.Status;
 
@@ -96,13 +102,9 @@ public sealed class TrackerService : IDisposable
             }
 
             LastError = null;
-            var camera = new CameraCapture();
-            if (!camera.Open(Settings.CameraId, 640, 480, Settings.Fps,
-                    Settings.EnableAutoExpo, Settings.CameraGain, Settings.CameraExpo,
-                    Settings.CaptureApi, Settings.CaptureFourcc))
+            var camera = OpenCamera();
+            if (camera == null)
             {
-                LastError = camera.LastError ?? $"Cannot open camera {Settings.CameraId}";
-                camera.Dispose();
                 return false;
             }
 
@@ -146,6 +148,45 @@ public sealed class TrackerService : IDisposable
             }
         }
     }
+
+    /// <summary>Opens the capture, auto-negotiating a (backend, format, resolution) combo that
+    /// actually delivers the target frame rate when enabled; cameras are too mode-inconsistent
+    /// to assume one works. Returns null and sets <see cref="LastError"/> when nothing opens.</summary>
+    private CameraCapture? OpenCamera()
+    {
+        if (Settings.CaptureAutoNegotiate)
+        {
+            var outcome = new CameraNegotiator().Negotiate(Settings.CameraId, Settings, Settings.Fps);
+            if (outcome.Camera != null)
+            {
+                return outcome.Camera; // left open by the successful probe
+            }
+
+            // Nothing met the target: open the best-rate combo anyway (slow beats dead).
+            var best = new CameraCapture();
+            if (OpenCombo(best, outcome.Combo))
+            {
+                return best;
+            }
+            LastError = best.LastError ?? $"Cannot open camera {Settings.CameraId}";
+            best.Dispose();
+            return null;
+        }
+
+        var forced = new CameraCapture();
+        if (OpenCombo(forced, new CameraNegotiator.Combo(Settings.CaptureApi, Settings.CaptureFourcc,
+                Settings.CaptureWidth, Settings.CaptureHeight)))
+        {
+            return forced;
+        }
+        LastError = forced.LastError ?? $"Cannot open camera {Settings.CameraId}";
+        forced.Dispose();
+        return null;
+    }
+
+    private bool OpenCombo(CameraCapture camera, CameraNegotiator.Combo c) =>
+        camera.Open(Settings.CameraId, c.Width, c.Height, Settings.Fps,
+            Settings.EnableAutoExpo, Settings.CameraGain, Settings.CameraExpo, c.Api, c.Fourcc);
 
     public void Stop()
     {

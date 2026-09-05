@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using OpenCvSharp;
 
 namespace HeadTracker.Core.Vision;
@@ -15,12 +16,19 @@ public sealed class CameraCapture : IFrameSource
     private Mat? _latest;
     private long _sequence;
     private long _consumedSequence = -1;
+    private double _captureFps;
+    private double _readMs;
 
     public bool IsOpen => _capture != null;
     public int FrameWidth { get; private set; }
     public int FrameHeight { get; private set; }
     public double ActualFps { get; private set; }
     public string? LastError { get; private set; }
+
+    /// <summary>[DIAG] Frames/sec actually delivered by cap.Read (camera/DSHOW layer) and the
+    /// last cap.Read blocking time in ms. Separates a capture bottleneck from a CPU one.</summary>
+    public double CaptureFps => _captureFps;
+    public double ReadMs => _readMs;
 
     public bool Open(int cameraId, int width, int height, double fps, bool autoExpo, double gain, double expo,
         string? api = "dshow", string? fourcc = "")
@@ -67,10 +75,17 @@ public sealed class CameraCapture : IFrameSource
         cap.Set(VideoCaptureProperties.FrameWidth, width);
         cap.Set(VideoCaptureProperties.FrameHeight, height);
         cap.Set(VideoCaptureProperties.Fps, fps);
-        // Legacy semantics: auto exposure toggle, then gain/exposure 0..1 -> 0..255.
-        cap.Set(VideoCaptureProperties.AutoExposure, autoExpo ? 1.0 : 0.0);
-        cap.Set(VideoCaptureProperties.Gain, PoseMath.Clamp(gain, 0.0, 1.0) * 255);
-        cap.Set(VideoCaptureProperties.Exposure, PoseMath.Clamp(expo, 0.0, 1.0) * 255);
+        // DirectShow exposure is a log2-seconds scale (roughly -13..-1), NOT 0..255.
+        // Writing expo*255 clamps to a long FIXED exposure: the image stays dark AND the
+        // frame rate locks to 1/exposure (e.g. 127ms -> ~8fps), immune to added light
+        // because auto-exposure was knocked out. So in auto mode we touch nothing and let
+        // the camera's own AE run; manual mode maps 0..1 onto the log2 range instead.
+        if (!autoExpo)
+        {
+            cap.Set(VideoCaptureProperties.AutoExposure, 0.0);
+            cap.Set(VideoCaptureProperties.Gain, PoseMath.Clamp(gain, 0.0, 1.0) * 255);
+            cap.Set(VideoCaptureProperties.Exposure, -13.0 + PoseMath.Clamp(expo, 0.0, 1.0) * 12.0);
+        }
 
         _capture = cap;
         FrameWidth = (int)cap.Get(VideoCaptureProperties.FrameWidth);
@@ -117,10 +132,23 @@ public sealed class CameraCapture : IFrameSource
     private void CaptureLoop()
     {
         var frame = new Mat();
+        // [DIAG] how fast cap.Read delivers frames vs how long each read blocks.
+        var fpsSw = Stopwatch.StartNew();
+        var readSw = new Stopwatch();
+        int frames = 0;
         while (_running)
         {
             var cap = _capture;
-            if (cap == null || !cap.Read(frame) || frame.Empty())
+            if (cap == null)
+            {
+                Thread.Sleep(5);
+                continue;
+            }
+
+            readSw.Restart();
+            bool ok = cap.Read(frame);
+            _readMs = readSw.Elapsed.TotalMilliseconds;
+            if (!ok || frame.Empty())
             {
                 Thread.Sleep(5);
                 continue;
@@ -131,6 +159,14 @@ public sealed class CameraCapture : IFrameSource
                 _latest?.Dispose();
                 _latest = frame.Clone();
                 _sequence++;
+            }
+
+            frames++;
+            if (fpsSw.ElapsedMilliseconds >= 500)
+            {
+                _captureFps = frames * 1000.0 / fpsSw.ElapsedMilliseconds;
+                frames = 0;
+                fpsSw.Restart();
             }
         }
         frame.Dispose();

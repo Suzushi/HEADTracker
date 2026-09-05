@@ -62,6 +62,14 @@ public sealed class TrackingPipeline : IDisposable
 
     public double FpsEstimate => _fpsEma;
     public double LastReprojectionRmsPx { get; private set; }
+
+    /// <summary>[DIAG] Capture-layer telemetry: is a low frame rate caused by the camera/USB/DSHOW
+    /// side (CaptureFps low, ReadMs high) or the CPU side (ProcessMs high)?</summary>
+    public int FrameWidth => _source.FrameWidth;
+    public int FrameHeight => _source.FrameHeight;
+    public double CaptureFps => (_source as CameraCapture)?.CaptureFps ?? -1;
+    public double ReadMs => (_source as CameraCapture)?.ReadMs ?? -1;
+    public double ProcessMs { get; private set; }
     public PoseRemapper Remapper => _remapper;
     public bool FaceTracked => !_firstSolvePose && _lastRoi.Width * _lastRoi.Height >= MinRoiArea;
 
@@ -208,6 +216,7 @@ public sealed class TrackingPipeline : IDisposable
                 _fpsEma = _fpsEma == 0 ? inst : _fpsEma * 0.95 + inst * 0.05;
             }
 
+            long procStart = Stopwatch.GetTimestamp();
             try
             {
                 Process(frame, dt);
@@ -220,6 +229,7 @@ public sealed class TrackingPipeline : IDisposable
             }
             finally
             {
+                ProcessMs = (Stopwatch.GetTimestamp() - procStart) * 1000.0 / Stopwatch.Frequency;
                 frame.Dispose();
             }
         }

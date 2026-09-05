@@ -44,7 +44,7 @@ public partial class CalibrationWindow : System.Windows.Window
 
         var s = _service.Settings;
         _camera = new CameraCapture();
-        if (!_camera.Open(s.CameraId, 640, 480, s.Fps, s.EnableAutoExpo, s.CameraGain, s.CameraExpo, s.CaptureApi, s.CaptureFourcc))
+        if (!_camera.Open(s.CameraId, s.CaptureWidth, s.CaptureHeight, s.Fps, s.EnableAutoExpo, s.CameraGain, s.CameraExpo, s.CaptureApi, s.CaptureFourcc))
         {
             _camera.Dispose();
             _camera = null;

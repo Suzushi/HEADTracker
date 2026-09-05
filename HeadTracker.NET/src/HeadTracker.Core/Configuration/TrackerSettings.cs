@@ -54,6 +54,22 @@ public sealed class TrackerSettings
     [YamlMember(Alias = "capture_fourcc")]
     public string CaptureFourcc { get; set; } = "";
 
+    /// <summary>Requested capture resolution. Some cameras (notably cheap 1080p models) ship a
+    /// badly-implemented low-res mode (640x480 capped near 8fps) while their native mode runs at
+    /// full rate; raise these to the native size if [DIAG] cap stays low at 640x480.</summary>
+    [YamlMember(Alias = "capture_width")]
+    public int CaptureWidth { get; set; } = 640;
+
+    [YamlMember(Alias = "capture_height")]
+    public int CaptureHeight { get; set; } = 480;
+
+    /// <summary>At startup, probe a ladder of (backend, pixel-format, resolution) combos and keep
+    /// the first whose measured capture rate meets the target fps. Cameras are too mode-
+    /// inconsistent to assume one combo works. Disable to force the exact capture_api /
+    /// capture_fourcc / capture_width / capture_height above.</summary>
+    [YamlMember(Alias = "capture_auto_negotiate")]
+    public bool CaptureAutoNegotiate { get; set; } = true;
+
     // --- camera calibration (written by the charuco wizard) -----------------
     // All zero / absent means "not calibrated": the pipeline falls back to the
     // legacy PS3Eye intrinsics scaled to the live resolution.
