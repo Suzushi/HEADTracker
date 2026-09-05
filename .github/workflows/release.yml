@@ -82,14 +82,24 @@ jobs:
           $archive = [IO.Compression.ZipFile]::OpenRead($zip)
           try {
             $names = $archive.Entries.FullName | ForEach-Object { $_ -replace '\\', '/' }
-            foreach ($required in 'HeadTracker.exe', 'config.yaml', 'assets/fsanet_capsule.onnx',
-                                  'assets/scrfd_500m_bnkps_shape640x640.onnx',
-                                  'assets/landmark_models/lm_model0_opt.onnx') {
-              if ($names -notcontains $required) {
-                throw "packaged zip is missing '$required' ($($names.Count) entries total)"
-              }
+            # Exactly what TrackingPipeline opens at startup. The five landmark tiers map to
+            # landmark_detect_method 0..4 in order (U, V, 1, 2, 3 -- the file names are legacy and
+            # deliberately do not match the level numbers, and lm_model0/T_opt.onnx in assets/ are
+            # loaded by nothing), and config.yaml ships level 1, so lm_modelV_opt.onnx is the one a
+            # fresh install reads. All five are required because the tier is a Settings dropdown: a
+            # missing file would only fail once the user moves it, long after the release shipped.
+            $lm = 'lm_modelU_opt.onnx', 'lm_modelV_opt.onnx', 'lm_model1_opt.onnx',
+                  'lm_model2_opt.onnx', 'lm_model3_opt.onnx'
+            $required = @('HeadTracker.exe', 'config.yaml',
+                          'assets/scrfd_500m_bnkps_shape640x640.onnx',
+                          'assets/fsanet_capsule.onnx',
+                          'assets/landmark_models/model_66.txt') +
+                        @($lm | ForEach-Object { "assets/landmark_models/$_" })
+            $missing = @($required | Where-Object { $names -notcontains $_ })
+            if ($missing.Count -gt 0) {
+              throw "packaged zip is missing $($missing.Count) required file(s): $($missing -join ', ') ($($names.Count) entries total)"
             }
-            Write-Host "zip verified: $($names.Count) entries"
+            Write-Host "zip verified: $($names.Count) entries, all $($required.Count) required files present"
           } finally {
             $archive.Dispose()
           }
