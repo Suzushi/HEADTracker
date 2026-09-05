@@ -70,9 +70,29 @@ jobs:
         run: |
           $v = '${{ steps.ver.outputs.version }}'
           $name = "HeadTracker-$v-win-x64"
-          $zip = Join-Path $env:GITHUB_WORKSPACE "$name.zip"
-          Compress-Archive -Path (Join-Path $env:GITHUB_WORKSPACE 'publish/*') `
-                           -DestinationPath $zip -CompressionLevel Optimal
+          $zip = "$env:GITHUB_WORKSPACE\$name.zip"
+          # ZipFile rather than Compress-Archive. Both write the platform separator when the host
+          # is .NET Framework -- a backslash on Windows, which the zip APPNOTE forbids and which
+          # makes 7-Zip flatten assets\ into literal filenames. Under pwsh/.NET 8, which is what
+          # this step runs on, CreateFromDirectory emits '/' instead; verified on .NET 8.0.30. The
+          # normalization below keeps the assertion correct either way.
+          [IO.Compression.ZipFile]::CreateFromDirectory("$env:GITHUB_WORKSPACE\publish", $zip, [IO.Compression.CompressionLevel]::Optimal, $false)
+          # A zip that quietly came out empty or without the models is a broken release that
+          # still looks successful, so assert on the contents rather than on the exit code.
+          $archive = [IO.Compression.ZipFile]::OpenRead($zip)
+          try {
+            $names = $archive.Entries.FullName | ForEach-Object { $_ -replace '\\', '/' }
+            foreach ($required in 'HeadTracker.exe', 'config.yaml', 'assets/fsanet_capsule.onnx',
+                                  'assets/scrfd_500m_bnkps_shape640x640.onnx',
+                                  'assets/landmark_models/lm_model0_opt.onnx') {
+              if ($names -notcontains $required) {
+                throw "packaged zip is missing '$required' ($($names.Count) entries total)"
+              }
+            }
+            Write-Host "zip verified: $($names.Count) entries"
+          } finally {
+            $archive.Dispose()
+          }
           $sha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           # "<hash>  <file>" so certutil and sha256sum -c both accept it.
           Set-Content -Path "$zip.sha256" -Value "$sha  $name.zip" -Encoding ascii -NoNewline
