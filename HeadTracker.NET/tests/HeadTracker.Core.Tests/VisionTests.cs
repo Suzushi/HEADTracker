@@ -242,6 +242,40 @@ public class CameraIntrinsicsTests
         Assert.Equal(553.61456617 * 2, k.Fx, 5);
         Assert.Equal(252.73270154 * 2, k.Cy, 5);
     }
+
+    [Fact]
+    public void AspectChange_KeepsFocalUniformAndShiftsCyByHalfCrop()
+    {
+        // 16:9 live from the 4:3 calibration: focal scales by the WIDTH ratio only (per-axis
+        // scaling stretched fy by 1080/480 and blew the 1080p reprojection RMS up to ~27px),
+        // and cy shifts by half the vertically cropped rows (480*3-1080=360).
+        var k = CameraIntrinsics.ForResolution(1920, 1080);
+        const double s = 3.0;
+        Assert.Equal(553.61456617 * s, k.Fx, 5);
+        Assert.Equal(556.75788726 * s, k.Fy, 5);
+        Assert.Equal(308.32781287 * s, k.Cx, 5);
+        Assert.Equal(252.73270154 * s - 180.0, k.Cy, 5);
+    }
+
+    [Fact]
+    public void CustomCalibration_UsesSameCropModel()
+    {
+        var s = new TrackerSettings
+        {
+            CameraFx = 1000,
+            CameraFy = 1000,
+            CameraCx = 640,
+            CameraCy = 360,
+            CalibratedWidth = 1280,
+            CalibratedHeight = 720,
+        };
+        var k = CameraIntrinsics.FromSettings(s, 1920, 1080);
+        Assert.Equal(1500, k.Fx, 5);
+        Assert.Equal(1500, k.Fy, 5);
+        Assert.Equal(960, k.Cx, 5);
+        Assert.Equal(540, k.Cy, 5); // same aspect: no crop shift
+        Assert.True(k.IsCustom);
+    }
 }
 
 public class OneEuroFilterTests

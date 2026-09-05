@@ -39,8 +39,22 @@ public partial class SettingsWindow : Window
         _edit.Normalize();
         SaveButton.IsEnabled = false;
         SaveButton.Content = Loc.Tr("btn_saving");
-        // Restarting the pipeline (camera + ONNX sessions) takes seconds; keep the UI responsive.
-        await Task.Run(() => _service.ApplySettings(_edit));
+        if (_service.IsRunning)
+        {
+            // Saving while tracking restarts the pipeline, which re-runs camera negotiation
+            // (seconds of probing). Shield this window as well: "refresh cameras" clicked
+            // mid-probe would enumerate devices against a live capture stream.
+            await BusyWindow.RunBlockedAsync(() =>
+            {
+                _service.ApplySettings(_edit);
+                return true;
+            }, this);
+        }
+        else
+        {
+            // Plain persist: nothing to reopen, so no dialog flash.
+            await Task.Run(() => _service.ApplySettings(_edit));
+        }
         DialogResult = true;
         Close();
     }

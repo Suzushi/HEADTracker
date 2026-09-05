@@ -96,7 +96,7 @@ public sealed class CameraCapture : IFrameSource
         {
             cap.Set(VideoCaptureProperties.AutoExposure, 0.0);
             cap.Set(VideoCaptureProperties.Gain, PoseMath.Clamp(gain, 0.0, 1.0) * 255);
-            cap.Set(VideoCaptureProperties.Exposure, -13.0 + PoseMath.Clamp(expo, 0.0, 1.0) * 12.0);
+            cap.Set(VideoCaptureProperties.Exposure, ExposureLog2(expo));
         }
 
         _capture = cap;
@@ -138,8 +138,12 @@ public sealed class CameraCapture : IFrameSource
     }
 
     public void SetGain(double gain) => _capture?.Set(VideoCaptureProperties.Gain, PoseMath.Clamp(gain, 0.0, 1.0) * 255);
-    public void SetExposure(double expo) => _capture?.Set(VideoCaptureProperties.Exposure, PoseMath.Clamp(expo, 0.0, 1.0) * 255);
+    public void SetExposure(double expo) => _capture?.Set(VideoCaptureProperties.Exposure, ExposureLog2(expo));
     public void SetAutoExposure(bool auto) => _capture?.Set(VideoCaptureProperties.AutoExposure, auto ? 1.0 : 0.0);
+
+    /// <summary>DirectShow exposure is a log2-seconds scale (roughly -13..-1), NOT 0..255: map the
+    /// 0..1 UI value onto it. Shared by Open and the live setter so both paths agree.</summary>
+    private static double ExposureLog2(double expo) => -13.0 + PoseMath.Clamp(expo, 0.0, 1.0) * 12.0;
 
     private void CaptureLoop()
     {

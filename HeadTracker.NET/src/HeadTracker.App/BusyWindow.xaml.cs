@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Threading.Tasks;
 
 namespace HeadTracker.App;
 
@@ -26,5 +27,25 @@ public partial class BusyWindow : Window
             e.Cancel = true; // no X, no Alt+F4: only negotiation completion may close us
         }
         base.OnClosing(e);
+    }
+
+    /// <summary>
+    /// Runs <paramref name="work"/> on a background thread behind this unclosable modal dialog.
+    /// Every path that reopens the camera goes through here, not just the main window's start
+    /// button: saving settings restarts the pipeline too, and "refresh cameras" clicked mid-probe
+    /// means a device enumeration racing a live capture stream.
+    /// </summary>
+    public static async Task<bool> RunBlockedAsync(Func<bool> work, Window? owner = null)
+    {
+        owner ??= Application.Current?.MainWindow;
+        var busy = new BusyWindow { Owner = owner is { IsVisible: true } ? owner : null };
+        var task = Task.Run(work);
+        _ = task.ContinueWith(_ => Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            busy.AllowClose = true;
+            busy.Close();
+        })), TaskScheduler.Default);
+        busy.ShowDialog(); // modal: nothing else is clickable until this returns
+        return await task;
     }
 }

@@ -29,16 +29,24 @@ public sealed class CameraIntrinsics
     }
 
     /// <summary>Legacy PS3Eye calibration scaled to the actual capture resolution.</summary>
-    public static CameraIntrinsics ForResolution(int width, int height)
+    public static CameraIntrinsics ForResolution(int width, int height) =>
+        ScaleTo(553.61456617, 556.75788726, 308.32781287, 252.73270154, 640, 480, width, height,
+            new[] { -0.10055392, 0.19422527, 0.00414563, -0.00049292, -0.02306945 }, isCustom: false);
+
+    /// <summary>
+    /// Scales intrinsics captured at (w0,h0) to a live (w,h) frame. Capture modes of one camera
+    /// share the horizontal field of view with square pixels, so the focal scales uniformly by
+    /// the width ratio and any vertical difference is a symmetric crop: cy shifts by half the
+    /// cropped rows. Per-axis scaling (the old behaviour) stretched fy by the height ratio
+    /// whenever the aspect changed (4:3 calibration -> 16:9 live), which is what blew the 1080p
+    /// reprojection RMS up to ~27px; at equal aspect the crop term is zero and this is identity.
+    /// </summary>
+    private static CameraIntrinsics ScaleTo(double fx, double fy, double cx, double cy,
+        int w0, int h0, int w, int h, double[] distortion, bool isCustom)
     {
-        double sx = width / 640.0;
-        double sy = height / 480.0;
-        return new CameraIntrinsics(
-            553.61456617 * sx,
-            556.75788726 * sy,
-            308.32781287 * sx,
-            252.73270154 * sy,
-            new[] { -0.10055392, 0.19422527, 0.00414563, -0.00049292, -0.02306945 });
+        double s = w / (double)w0;
+        double croppedRows = h0 * s - h; // >0: live frame is a vertical crop of the scaled calib frame
+        return new CameraIntrinsics(fx * s, fy * s, cx * s, cy * s - croppedRows / 2.0, distortion, isCustom);
     }
 
     /// <summary>
@@ -53,13 +61,8 @@ public sealed class CameraIntrinsics
             return ForResolution(width, height);
         }
 
-        double sx = width / (double)settings.CalibratedWidth;
-        double sy = height / (double)settings.CalibratedHeight;
-        return new CameraIntrinsics(
-            settings.CameraFx * sx,
-            settings.CameraFy * sy,
-            settings.CameraCx * sx,
-            settings.CameraCy * sy,
+        return ScaleTo(settings.CameraFx, settings.CameraFy, settings.CameraCx, settings.CameraCy,
+            settings.CalibratedWidth, settings.CalibratedHeight, width, height,
             new[] { settings.DistK1, settings.DistK2, settings.DistP1, settings.DistP2, settings.DistK3 },
             isCustom: true);
     }

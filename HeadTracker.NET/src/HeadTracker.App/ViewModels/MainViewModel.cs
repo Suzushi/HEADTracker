@@ -100,8 +100,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         string? error;
         try
         {
-            // Camera open + ONNX session creation take seconds; keep the UI responsive.
-            ok = await RunBlockedAsync(() => _service.Start());
+            // Camera open + ONNX session creation take seconds; keep the UI responsive and
+            // every other control unreachable behind the modal shield while probing runs.
+            ok = await BusyWindow.RunBlockedAsync(() => _service.Start());
             error = _service.LastError;
         }
         finally
@@ -168,7 +169,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             // Teardown + reopen + ONNX session recreation take seconds; keep the UI alive.
-            ok = await RunBlockedAsync(() => _service.RestartCamera());
+            ok = await BusyWindow.RunBlockedAsync(() => _service.RestartCamera());
             error = _service.LastError;
         }
         finally
@@ -193,24 +194,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _service.Recenter();
         StatusText = IsRunning ? Loc.Tr("status_recentered") : StatusText;
-    }
-
-    /// <summary>Runs <paramref name="work"/> on a background thread while an unclosable modal
-    /// dialog blocks the rest of the UI. Camera negotiation probes several (backend, format,
-    /// resolution) combos for seconds; letting the user open settings or stop mid-probe only
-    /// invites trouble, so every other control stays unreachable until the work settles.</summary>
-    private static async Task<bool> RunBlockedAsync(Func<bool> work)
-    {
-        var main = Application.Current?.MainWindow;
-        var busy = new BusyWindow { Owner = main is { IsVisible: true } ? main : null };
-        var task = Task.Run(work);
-        _ = task.ContinueWith(_ => Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
-        {
-            busy.AllowClose = true;
-            busy.Close();
-        })), TaskScheduler.Default);
-        busy.ShowDialog(); // modal: nothing else is clickable until this returns
-        return await task;
     }
 
     [RelayCommand]
